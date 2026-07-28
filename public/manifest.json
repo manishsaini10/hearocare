@@ -1,0 +1,21 @@
+{
+  "name": "Hear O Care - Hearing Loss Supplement",
+  "short_name": "Hear O Care",
+  "description": "Looking for ways to support your hearing health? hear o care is a hearing loss supplement for hearing loss issue.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#e91e63",
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

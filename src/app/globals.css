@@ -1,26 +1,141 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --primary: #e91e63;
+    --primary-hover: #d81b60;
+    --primary-light: #fce4ec;
+    --secondary: #0284c7;
+    --dark: #0f172a;
+    --dark-surface: #1e293b;
+    --light-bg: #f8fafc;
+    --text-main: #334155;
+    --text-heading: #0f172a;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: var(--text-main);
+    overflow-x: hidden;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Glassmorphism Classes */
+.glass-navbar {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark-glass-navbar {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(233, 30, 99, 0.4);
+  box-shadow: 0 20px 40px -15px rgba(233, 30, 99, 0.15);
+  transform: translateY(-4px);
+}
+
+.dark-glass-card {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark-glass-card:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(233, 30, 99, 0.5);
+  box-shadow: 0 20px 40px -15px rgba(233, 30, 99, 0.3);
+  transform: translateY(-4px);
+}
+
+/* Shiny Gradient Text & Backgrounds */
+.gradient-text {
+  background: linear-gradient(135deg, #e91e63 0%, #0284c7 50%, #8224e3 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 6s linear infinite;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+}
+
+.gradient-btn {
+  background: linear-gradient(135deg, #e91e63 0%, #d81b60 50%, #0284c7 100%);
+  background-size: 200% auto;
+  transition: all 0.4s ease;
+}
+
+.gradient-btn:hover {
+  background-position: right center;
+  box-shadow: 0 10px 25px -5px rgba(233, 30, 99, 0.4);
+  transform: translateY(-2px);
+}
+
+.accent-glow {
+  box-shadow: 0 0 40px rgba(233, 30, 99, 0.3);
+}
+
+.blue-glow {
+  box-shadow: 0 0 40px rgba(2, 132, 199, 0.3);
+}
+
+/* Animations */
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(1deg); }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(233, 30, 99, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(233, 30, 99, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+/* Micro hover transitions */
+.hover-scale {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.hover-scale:hover {
+  transform: scale(1.03);
 }

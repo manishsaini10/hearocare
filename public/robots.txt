@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://hearocare.com/sitemap.xml
+Host: https://hearocare.com
