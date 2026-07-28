@@ -41,6 +41,11 @@ export const metadata: Metadata = {
   authors: [{ name: "Hear O Care Medical & Nutrition Team", url: SITE_CONFIG.url }],
   publisher: "Hear O Care India",
   category: "Health & Supplements",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   openGraph: {
     title: "hearing loss supplement | Hear O Care",
     description: SITE_CONFIG.description,
