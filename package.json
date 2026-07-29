@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "deploy": "npx wrangler pages deploy"
+    "deploy": "npx wrangler pages deploy ./out --project-name=hearocare"
   },
   "dependencies": {
     "lucide-react": "^1.27.0",
