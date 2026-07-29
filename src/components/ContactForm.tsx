@@ -11,13 +11,34 @@ export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+
+    const form = e.currentTarget;
+    const data = {
+      name: (form.elements.namedItem("name") as HTMLInputElement).value,
+      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
+      subject: (form.elements.namedItem("subject") as HTMLInputElement).value,
+      message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
+    };
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      }
+    } catch {
+      // fallback silently
+    } finally {
       setLoading(false);
-      setSubmitted(true);
-    }, 1000);
+    }
   };
 
   return (
@@ -93,28 +114,28 @@ export default function ContactForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name *</Label>
-                <Input id="name" type="text" required placeholder="e.g. Rahul Sharma" />
+                <Input id="name" name="name" type="text" required placeholder="e.g. Rahul Sharma" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address *</Label>
-                <Input id="email" type="email" required placeholder="e.g. rahul@example.com" />
+                <Input id="email" name="email" type="email" required placeholder="e.g. rahul@example.com" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" type="tel" placeholder="+91 98765 43210" />
+                <Input id="phone" name="phone" type="tel" placeholder="+91 98765 43210" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject *</Label>
-                <Input id="subject" type="text" required placeholder="e.g. Product Inquiry / Order Support" />
+                <Input id="subject" name="subject" type="text" required placeholder="e.g. Product Inquiry / Order Support" />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="message">Your Message *</Label>
-              <Textarea id="message" required rows={5} placeholder="Write your query or message here..." />
+                <Label htmlFor="message">Your Message *</Label>
+                <Textarea id="message" name="message" required rows={5} placeholder="Write your query or message here..." />
             </div>
 
             <button
