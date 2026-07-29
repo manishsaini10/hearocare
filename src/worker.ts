@@ -93,28 +93,26 @@ Subject: ${body.subject}
 Message: ${body.message}
         `;
 
+        const mailPayload = {
+          personalizations: [
+            { to: [{ email: "mnishsaini@gmail.com", name: "Hear O Care" }] },
+          ],
+          from: { email: "noreply@hearocare.com", name: "Hear O Care" },
+          subject: `New enquiry from ${body.name} - ${body.subject}`,
+          content: [{ type: "text/plain", value: emailContent }],
+        };
+
         const mailRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            personalizations: [
-              {
-                to: [{ email: "mnishsaini@gmail.com", name: "Hear O Care" }],
-                "dkim_domain": "hearocare.com",
-                "dkim_selector": "mailchannels",
-              },
-            ],
-            from: { email: "noreply@hearocare.com", name: "Hear O Care" },
-            subject: `New enquiry from ${body.name} - ${body.subject}`,
-            content: [{ type: "text/plain", value: emailContent }],
-          }),
+          body: JSON.stringify(mailPayload),
         });
 
         if (!mailRes.ok) {
           const mailErr = await mailRes.text();
           console.error("MailChannels error:", mailErr);
           return Response.json(
-            { success: false, error: "Email delivery failed" },
+            { success: false, error: `Email failed: ${mailErr.substring(0, 200)}` },
             { status: 500, headers: corsHeaders() }
           );
         }
