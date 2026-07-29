@@ -5,6 +5,6 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./out",
-    "not_found_handling": "single_page_application"
+    "not_found_handling": "single-page-application"
   }
 }
