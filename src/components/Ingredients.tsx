@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { INGREDIENTS } from "@/data/siteData";
 import { Sparkles, Activity } from "lucide-react";
 
@@ -7,7 +8,7 @@ export default function Ingredients() {
       <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16">
         
         {/* Section Header */}
-        <div className="text-center max-w-4xl mx-auto mb-20 space-y-4">
+        <div className="text-center max-w-4xl mx-auto mb-16 space-y-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-pink-100 text-pink-700 font-extrabold text-xs tracking-wider uppercase shadow-sm">
             <Sparkles className="w-4 h-4 text-pink-600 animate-spin-slow" />
             <span>Synergistic Formulation</span>
@@ -20,6 +21,20 @@ export default function Ingredients() {
           <p className="text-slate-600 text-lg sm:text-xl leading-relaxed font-normal">
             Each capsule of Hear O Care is packed with scientifically proven antioxidants, vitamins, and minerals essential for preserving ear nerve longevity.
           </p>
+        </div>
+
+        {/* Product Image Showcase */}
+        <div className="flex justify-center mb-16">
+          <div className="relative w-full max-w-xs sm:max-w-sm rounded-3xl bg-gradient-to-b from-slate-100 to-white border border-slate-200/60 shadow-xl p-8 flex items-center justify-center group">
+            <Image
+              src="/images/product-1.png"
+              alt="Hear O Care Product"
+              width={280}
+              height={400}
+              className="object-contain group-hover:scale-105 transition-transform duration-500"
+              priority
+            />
+          </div>
         </div>
 
         {/* Ingredients Grid */}
