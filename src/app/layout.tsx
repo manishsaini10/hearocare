@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SmoothScroll from "@/components/SmoothScroll";
 import { SITE_CONFIG, FAQS, TESTIMONIALS } from "@/data/siteData";
 
 export const viewport: Viewport = {
@@ -228,6 +229,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased bg-white text-slate-900 selection:bg-pink-500 selection:text-white">
+        <SmoothScroll />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

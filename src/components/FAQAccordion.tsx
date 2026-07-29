@@ -1,52 +1,34 @@
 "use client";
 
-import { useState } from "react";
 import { FAQS, FAQItem } from "@/data/siteData";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { HelpCircle } from "lucide-react";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 
 export default function FAQAccordion({ items = FAQS }: { items?: FAQItem[] }) {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
-
-  const toggle = (idx: number) => {
-    setOpenIndex(openIndex === idx ? null : idx);
-  };
-
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-      {items.map((item, idx) => {
-        const isOpen = openIndex === idx;
-        return (
-          <div
-            key={idx}
-            className={`border rounded-2xl transition-all duration-200 overflow-hidden ${
-              isOpen
-                ? "bg-white border-pink-500 shadow-md ring-1 ring-pink-500/20"
-                : "bg-white/80 border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            <button
-              onClick={() => toggle(idx)}
-              className="w-full px-6 py-5 flex items-center justify-between text-left gap-4 font-bold text-slate-900 text-base sm:text-lg focus:outline-none"
-            >
-              <div className="flex items-center gap-3">
-                <HelpCircle className={`w-5 h-5 shrink-0 ${isOpen ? "text-pink-600" : "text-slate-400"}`} />
-                <span>{item.question}</span>
-              </div>
-              <ChevronDown
-                className={`w-5 h-5 text-slate-500 transition-transform duration-200 shrink-0 ${
-                  isOpen ? "rotate-180 text-pink-600" : ""
-                }`}
-              />
-            </button>
-
-            {isOpen && (
-              <div className="px-6 pb-6 pt-1 text-slate-600 text-sm sm:text-base leading-relaxed border-t border-slate-100">
-                {item.answer}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <Accordion type="single" collapsible defaultValue="0" className="w-full max-w-3xl mx-auto space-y-3">
+      {items.map((item, idx) => (
+        <AccordionItem
+          key={idx}
+          value={String(idx)}
+          className="border border-slate-200 rounded-2xl bg-white/80 data-[state=open]:border-pink-500 data-[state=open]:shadow-md px-6"
+        >
+          <AccordionTrigger className="flex items-center gap-3 [&>svg]:hidden">
+            <span className="flex items-center gap-3">
+              <HelpCircle className="w-5 h-5 text-pink-500 shrink-0" />
+              <span>{item.question}</span>
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="text-slate-600 text-base leading-relaxed">
+            {item.answer}
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }

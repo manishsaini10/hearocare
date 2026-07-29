@@ -2,7 +2,10 @@
 
 import { useState, FormEvent } from "react";
 import { SITE_CONFIG } from "@/data/siteData";
-import { Send, CheckCircle2, Mail, MapPin, Clock, Phone } from "lucide-react";
+import { Send, CheckCircle2, Mail, MapPin, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -20,7 +23,6 @@ export default function ContactForm() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
       
-      {/* Contact Details Column */}
       <div className="lg:col-span-5 space-y-8 bg-slate-900 text-white p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-xl">
         <div className="space-y-3">
           <span className="px-3 py-1 rounded-full bg-pink-500/20 text-pink-400 font-bold text-xs uppercase tracking-wider">
@@ -69,7 +71,6 @@ export default function ContactForm() {
         </div>
       </div>
 
-      {/* Form Column */}
       <div className="lg:col-span-7 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl space-y-6">
         <h3 className="text-2xl font-bold text-slate-900">Send Us a Message</h3>
 
@@ -90,66 +91,30 @@ export default function ContactForm() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Rahul Sharma"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all text-sm"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name *</Label>
+                <Input id="name" type="text" required placeholder="e.g. Rahul Sharma" />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. rahul@example.com"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all text-sm"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input id="email" type="email" required placeholder="e.g. rahul@example.com" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  placeholder="+91 98765 43210"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all text-sm"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" type="tel" placeholder="+91 98765 43210" />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Subject *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Product Inquiry / Order Support"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all text-sm"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject *</Label>
+                <Input id="subject" type="text" required placeholder="e.g. Product Inquiry / Order Support" />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Your Message *
-              </label>
-              <textarea
-                required
-                rows={5}
-                placeholder="Write your query or message here..."
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-500/20 outline-none transition-all text-sm"
-              />
+            <div className="space-y-2">
+              <Label htmlFor="message">Your Message *</Label>
+              <Textarea id="message" required rows={5} placeholder="Write your query or message here..." />
             </div>
 
             <button
