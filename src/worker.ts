@@ -97,7 +97,7 @@ Message: ${body.message}
           personalizations: [
             { to: [{ email: "mnishsaini@gmail.com", name: "Hear O Care" }] },
           ],
-          from: { email: "noreply@hearocare.com", name: "Hear O Care" },
+          from: { email: "noreply@hearocare.mnishsaini.workers.dev", name: "Hear O Care" },
           subject: `New enquiry from ${body.name} - ${body.subject}`,
           content: [{ type: "text/plain", value: emailContent }],
         };
