@@ -96,7 +96,7 @@ Message: ${body.message}
         const mailPayload = {
           personalizations: [
             {
-              to: [{ email: "mnishsaini@gmail.com", name: "Hear O Care" }],
+              to: [{ email: "support@hearocare.com", name: "Hear O Care" }],
               headers: { "Reply-To": body.email },
             },
           ],

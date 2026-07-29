@@ -37,7 +37,7 @@ export const SITE_CONFIG = {
     youtube: "https://www.youtube.com/@hearocare",
   },
   contact: {
-    email: "mnishsaini@gmail.com",
+    email: "support@hearocare.com",
     phone: "+91 98765 43210",
     address: "Yamunanagar, Haryana, India",
     workingHours: "Mon - Sat: 9:00 AM - 6:00 PM IST",
