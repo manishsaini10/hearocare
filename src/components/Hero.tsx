@@ -1,6 +1,11 @@
+"use client";
+
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { SITE_CONFIG } from "@/data/siteData";
 import { ShoppingBag, FileText, CheckCircle2, Star, ShieldCheck, Sparkles } from "lucide-react";
+
+const Product3D = dynamic(() => import("@/components/Product3D"), { ssr: false });
 
 export default function Hero() {
   return (
@@ -104,15 +109,9 @@ export default function Hero() {
                 </div>
               </div>
 
-              {/* Animated Floating Product Image */}
-              <div className="relative w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-slate-950/90 border border-slate-800/90 flex items-center justify-center group p-6 shadow-inner">
-                <Image
-                  src={SITE_CONFIG.ogImage}
-                  alt="Hear O Care Supplement"
-                  fill
-                  className="object-contain p-4 group-hover:scale-110 transition-transform duration-500 animate-float"
-                  priority
-                />
+              {/* 3D Product Viewer */}
+              <div className="relative w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-slate-950/90 border border-slate-800/90 shadow-inner">
+                <Product3D />
               </div>
 
               {/* Bottom Card Footer */}
