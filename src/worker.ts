@@ -4,19 +4,61 @@ interface ContactPayload {
   phone?: string;
   subject: string;
   message: string;
+  honeypot?: string;
+  timeCheck?: number;
+  turnstileToken?: string;
+}
+
+const rateLimit = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimit.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimit.set(ip, { count: 1, resetAt: now + 60000 });
+    return false;
+  }
+  entry.count++;
+  return entry.count > 5;
 }
 
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders() });
+    }
+
     if (url.pathname === "/api/contact" && request.method === "POST") {
       try {
+        const clientIp = request.headers.get("CF-Connecting-IP") || "unknown";
+        if (isRateLimited(clientIp)) {
+          return Response.json(
+            { success: false, error: "Too many requests. Try again later." },
+            { status: 429, headers: corsHeaders() }
+          );
+        }
+
         const body: ContactPayload = await request.json();
 
         if (!body.name || !body.email || !body.subject || !body.message) {
           return Response.json(
             { success: false, error: "Missing required fields" },
+            { status: 400, headers: corsHeaders() }
+          );
+        }
+
+        if (body.honeypot) {
+          return Response.json(
+            { success: false, error: "Bot detected" },
+            { status: 400, headers: corsHeaders() }
+          );
+        }
+
+        if (!body.timeCheck || body.timeCheck < 3000) {
+          return Response.json(
+            { success: false, error: "Form submitted too quickly" },
             { status: 400, headers: corsHeaders() }
           );
         }

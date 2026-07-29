@@ -1,27 +1,50 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useRef, useEffect } from "react";
 import { SITE_CONFIG } from "@/data/siteData";
 import { Send, CheckCircle2, Mail, MapPin, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
+const TURNSTILE_SITE_KEY = "YOUR_TURNSTILE_SITE_KEY";
+
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const formMountTime = useRef(Date.now());
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const tokenRef = useRef<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && TURNSTILE_SITE_KEY !== "YOUR_TURNSTILE_SITE_KEY") {
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     const form = e.currentTarget;
+    const elapsed = Date.now() - formMountTime.current;
+    const honeypot = (form.elements.namedItem("website") as HTMLInputElement)?.value;
+
     const data = {
       name: (form.elements.namedItem("name") as HTMLInputElement).value,
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
       phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       subject: (form.elements.namedItem("subject") as HTMLInputElement).value,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
+      honeypot,
+      timeCheck: elapsed,
+      turnstileToken: tokenRef.current,
     };
 
     try {
@@ -31,11 +54,14 @@ export default function ContactForm() {
         body: JSON.stringify(data),
       });
 
+      const result = await res.json();
       if (res.ok) {
         setSubmitted(true);
+      } else {
+        setError(result.error || "Failed to send");
       }
     } catch {
-      // fallback silently
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +91,6 @@ export default function ContactForm() {
               <p className="text-slate-400 text-xs mt-0.5">{SITE_CONFIG.contact.email}</p>
             </div>
           </div>
-
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shrink-0">
               <MapPin className="w-5 h-5" />
@@ -75,7 +100,6 @@ export default function ContactForm() {
               <p className="text-slate-400 text-xs mt-0.5">{SITE_CONFIG.contact.address}</p>
             </div>
           </div>
-
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shrink-0">
               <Clock className="w-5 h-5" />
@@ -86,7 +110,6 @@ export default function ContactForm() {
             </div>
           </div>
         </div>
-
         <div className="pt-4 border-t border-slate-800 text-xs text-slate-400">
           <p>Looking to order directly? Visit our official Amazon store.</p>
         </div>
@@ -134,9 +157,29 @@ export default function ContactForm() {
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="message">Your Message *</Label>
-                <Textarea id="message" name="message" required rows={5} placeholder="Write your query or message here..." />
+              <Label htmlFor="message">Your Message *</Label>
+              <Textarea id="message" name="message" required rows={5} placeholder="Write your query or message here..." />
             </div>
+
+            <div className="absolute opacity-0 pointer-events-none" aria-hidden="true">
+              <Label htmlFor="website">Website</Label>
+              <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+            </div>
+
+            <div ref={turnstileRef} className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-callback="onTurnstileToken"
+              onLoad={() => {
+                if ((window as any).turnstile) {
+                  (window as any).turnstile.render(turnstileRef.current, {
+                    sitekey: TURNSTILE_SITE_KEY,
+                    callback: (token: string) => { tokenRef.current = token; },
+                  });
+                }
+              }}
+            />
+
+            {error && (
+              <p className="text-red-600 text-sm font-medium">{error}</p>
+            )}
 
             <button
               type="submit"
