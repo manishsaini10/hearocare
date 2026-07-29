@@ -83,6 +83,14 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  verification: {
+    google: "YOUR_GOOGLE_SEARCH_CONSOLE_CODE",
+    yandex: "YOUR_YANDEX_CODE",
+    yahoo: "YOUR_YAHOO_CODE",
+  },
+  other: {
+    "msvalidate.01": "YOUR_BING_VERIFICATION_CODE",
+  },
 };
 
 export default function RootLayout({
