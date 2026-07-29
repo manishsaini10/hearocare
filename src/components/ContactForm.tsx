@@ -7,18 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-const TURNSTILE_SITE_KEY = "YOUR_TURNSTILE_SITE_KEY";
+const TURNSTILE_SITE_KEY = "0x4AAAAAAEAuLiykEsxNdQ6G";
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const formMountTime = useRef(Date.now());
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const tokenRef = useRef<string>("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && TURNSTILE_SITE_KEY !== "YOUR_TURNSTILE_SITE_KEY") {
+    if (typeof window !== "undefined") {
       const script = document.createElement("script");
       script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
       script.async = true;
@@ -32,6 +31,13 @@ export default function ContactForm() {
     setLoading(true);
     setError("");
 
+    const turnstileToken = (document.querySelector("[name=cf-turnstile-response]") as HTMLInputElement)?.value;
+    if (!turnstileToken) {
+      setError("Please complete the security check.");
+      setLoading(false);
+      return;
+    }
+
     const form = e.currentTarget;
     const elapsed = Date.now() - formMountTime.current;
     const honeypot = (form.elements.namedItem("website") as HTMLInputElement)?.value;
@@ -44,7 +50,7 @@ export default function ContactForm() {
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
       honeypot,
       timeCheck: elapsed,
-      turnstileToken: tokenRef.current,
+      turnstileToken,
     };
 
     try {
@@ -133,7 +139,7 @@ export default function ContactForm() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name *</Label>
@@ -166,16 +172,7 @@ export default function ContactForm() {
               <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
             </div>
 
-            <div ref={turnstileRef} className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-callback="onTurnstileToken"
-              onLoad={() => {
-                if ((window as any).turnstile) {
-                  (window as any).turnstile.render(turnstileRef.current, {
-                    sitekey: TURNSTILE_SITE_KEY,
-                    callback: (token: string) => { tokenRef.current = token; },
-                  });
-                }
-              }}
-            />
+            <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} />
 
             {error && (
               <p className="text-red-600 text-sm font-medium">{error}</p>

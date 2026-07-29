@@ -63,6 +63,26 @@ export default {
           );
         }
 
+        if (body.turnstileToken) {
+          const turnstileRes = await fetch(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            {
+              method: "POST",
+              body: new URLSearchParams({
+                secret: "0x4AAAAAAEAuLqgL7rYxhfrmrgGB-psYDjQ",
+                response: body.turnstileToken,
+              }),
+            }
+          );
+          const turnstileData = await turnstileRes.json() as { success: boolean };
+          if (!turnstileData.success) {
+            return Response.json(
+              { success: false, error: "Security check failed" },
+              { status: 400, headers: corsHeaders() }
+            );
+          }
+        }
+
         const emailContent = `
 New Contact Form Submission
 ===========================
