@@ -27,7 +27,7 @@ export default function Ingredients() {
         <div className="flex justify-center mb-16">
           <div className="relative w-full max-w-xs sm:max-w-sm rounded-3xl bg-gradient-to-b from-slate-100 to-white border border-slate-200/60 shadow-xl p-8 flex items-center justify-center group">
             <Image
-              src="/images/product-1.png"
+              src="/images/Hear-o-Care.png"
               alt="Hear O Care Product"
               width={280}
               height={400}
