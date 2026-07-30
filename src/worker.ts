@@ -9,7 +9,59 @@ interface ContactPayload {
   turnstileToken?: string;
 }
 
+const spamPaths = [
+  "/ontdek-de-beste-online-casinos-stunning-games-unparalleled-bonuses-fast-payouts-in-de-wereld-van/",
+  "/777-casino-85-free-spins-on-registration-only-United-Kingdom/",
+  "/descubre-los-secretos-de-malina-casino-y-transforma-tu-suerte-los-casinos-han-sido-centros-de-entret/",
+  "/bingo-online-casino-50/",
+  "/best-free-casino-apps/",
+  "/huge-online-casino-bonus-for-uk-players/",
+  "/deposit-15-get-30-free-live-casino-uk/",
+  "/free-online-slot-machine-apps/",
+  "/dealer-online-casino/",
+  "/paysafe-casinos-uk/",
+  "/free-racing-slots-uk/",
+  "/casino-online-city-center/",
+  "/az-online-slot-sites/",
+  "/virginbet-casino-no-deposit-bonus-2026-special-offer-UK/",
+  "/pay-by-phone-bill-casino-birthday-bonus-casino-uk/",
+  "/best-andar-bahar-casino-uk/",
+  "/no-max-cashout-bonus-casino-uk/",
+  "/best-online-casino-fish-game/",
+  "/no-kyc-casino-no-deposit-bonus-uk/",
+  "/best-google-pay-casino-real-money-casino-uk/",
+  "/bettom-casino-first-deposit-bonus-200-free-spins-United-Kingdom/",
+  "/free-demo-roulette-uk/",
+  "/trada-casino-real-money-bonus-no-deposit-2026-UK/",
+  "/rhino-casino-welcome-bonus-100-free-spins-United-Kingdom/",
+  "/bcgame-casino-claim-now-no-deposit-bonus-United-Kingdom/",
+  "/deposit-10-play-with-40-online-blackjack-uk/",
+  "/uk-racing-casino/",
+  "/best-1000x-max-win-slots-uk/",
+  "/khaotichnaia-priroda-professionalnogo-gemblinga/",
+  "/best-online-casino-game-software/",
+];
+
+const spamPostIds = ["53102", "53055", "53311", "53062", "53053", "52989"];
+
+const spamKeywords = [
+  "casino", "gambling", "slots", "betting", "poker",
+  "roulette", "blackjack", "spins", "bonus-uk", "no-deposit",
+];
+
+const legitimatePaths = ["/blog/", "/product/", "/buy-now", "/reviews"];
+
 const rateLimit = new Map<string, { count: number; resetAt: number }>();
+
+function isSpam(pathname: string): boolean {
+  if (spamPaths.includes(pathname)) return true;
+  const isLegit = legitimatePaths.some((lp) => pathname.startsWith(lp));
+  if (!isLegit) {
+    const lower = pathname.toLowerCase();
+    if (spamKeywords.some((kw) => lower.includes(kw))) return true;
+  }
+  return false;
+}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -25,6 +77,16 @@ function isRateLimited(ip: string): boolean {
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    const pathname = url.pathname;
+
+    if (isSpam(pathname)) {
+      return new Response("Gone", { status: 410 });
+    }
+
+    const p = url.searchParams.get("p");
+    if (p && spamPostIds.includes(p)) {
+      return new Response("Gone", { status: 410 });
+    }
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders() });
