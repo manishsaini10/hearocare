@@ -115,7 +115,7 @@ export default function AboutUsPage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-2">
             <a
-              href={SITE_CONFIG.amazonUrl}
+              href={data.siteConfig.amazonUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="px-10 py-5 rounded-2xl bg-white text-pink-600 font-black text-lg hover:bg-pink-50 transition-all shadow-xl flex items-center gap-3 hover:scale-105"
