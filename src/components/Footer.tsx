@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
-import { SITE_CONFIG, NAV_LINKS, DISCLAIMER_TEXT } from "@/data/siteData";
+import { NAV_LINKS } from "@/data/siteData";
+import { useCMS } from "@/lib/cmsContext";
 import { ShieldCheck, FileText, ShoppingBag, ArrowUpRight } from "lucide-react";
 
 export default function Footer() {
+  const { data } = useCMS();
+  const siteConfig = data.siteConfig;
   return (
     <footer className="bg-slate-950 text-slate-300 border-t border-slate-800 pt-20 pb-14 relative">
       <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 space-y-16">
@@ -48,7 +53,7 @@ export default function Footer() {
               ))}
               <li>
                 <a
-                  href={SITE_CONFIG.cataloguePdf}
+                  href={siteConfig.cataloguePdf}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-pink-300 transition-colors flex items-center gap-2 text-pink-400 font-extrabold"
@@ -69,7 +74,7 @@ export default function Footer() {
               Buy authentic Hear O Care directly via our official store page on Amazon India with fast delivery across India.
             </p>
             <a
-              href={SITE_CONFIG.amazonUrl}
+              href={siteConfig.amazonUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-black text-base shadow-xl hover:scale-105 transition-all"
@@ -86,13 +91,13 @@ export default function Footer() {
               Customer Support
             </h4>
             <div className="text-base space-y-3 text-slate-400 font-medium">
-              <p><strong className="text-slate-200">Email:</strong> {SITE_CONFIG.contact.email}</p>
-              <p><strong className="text-slate-200">Location:</strong> {SITE_CONFIG.contact.address}</p>
-              <p><strong className="text-slate-200">Hours:</strong> {SITE_CONFIG.contact.workingHours}</p>
+              <p><strong className="text-slate-200">Email:</strong> {siteConfig.contact.email}</p>
+              <p><strong className="text-slate-200">Location:</strong> {siteConfig.contact.address}</p>
+              <p><strong className="text-slate-200">Hours:</strong> {siteConfig.contact.workingHours}</p>
             </div>
             <div className="pt-2 flex items-center gap-4">
               <a
-                href={SITE_CONFIG.social.facebook}
+                href={siteConfig.social.facebook}
                 target="_blank"
                 rel="noreferrer"
                 className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-pink-500 hover:scale-110 transition-all text-xs font-bold"
@@ -100,7 +105,7 @@ export default function Footer() {
                 FB
               </a>
               <a
-                href={SITE_CONFIG.social.twitter}
+                href={siteConfig.social.twitter}
                 target="_blank"
                 rel="noreferrer"
                 className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-pink-500 hover:scale-110 transition-all text-xs font-bold"

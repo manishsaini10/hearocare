@@ -1,8 +1,14 @@
+"use client";
+
 import Image from "next/image";
-import { TESTIMONIALS, SITE_CONFIG } from "@/data/siteData";
+import { useCMS } from "@/lib/cmsContext";
 import { Star, Quote, ShieldCheck, ShoppingBag } from "lucide-react";
 
 export default function Testimonials() {
+  const { data } = useCMS();
+  const testimonials = data.testimonials;
+  const siteConfig = data.siteConfig;
+
   return (
     <section className="py-24 bg-slate-950 text-white relative overflow-hidden">
       {/* Background Glow */}
@@ -28,7 +34,7 @@ export default function Testimonials() {
 
         {/* Testimonial Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {TESTIMONIALS.map((t) => (
+          {testimonials.map((t) => (
             <div
               key={t.id}
               className="dark-glass-card p-10 rounded-3xl space-y-8 flex flex-col justify-between hover:border-pink-500/60 hover:shadow-2xl hover:shadow-pink-600/20 transition-all duration-300 relative group"
@@ -99,7 +105,7 @@ export default function Testimonials() {
 
           <div className="pt-4">
             <a
-              href={SITE_CONFIG.amazonUrl}
+              href={siteConfig.amazonUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3.5 px-10 py-5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-pink-600 text-white font-black text-lg shadow-xl hover:scale-105 transition-all animate-pulse-glow"

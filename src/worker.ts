@@ -74,8 +74,21 @@ function isRateLimited(ip: string): boolean {
   return entry.count > 5;
 }
 
+interface KVNamespace {
+  get(key: string, type?: "text" | "json"): Promise<any>;
+  put(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
+interface Env {
+  PAGE_DATA?: KVNamespace;
+  ADMIN_KEY?: string;
+}
+
+const DEFAULT_ADMIN_KEY = "hearocare2026admin";
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
@@ -90,6 +103,130 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders() });
+    }
+
+    // CMS Auth Route
+    if (url.pathname === "/api/cms/login" && request.method === "POST") {
+      try {
+        const body = await request.json() as { password?: string };
+        const secret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
+        if (body.password === secret) {
+          return Response.json(
+            { success: true, token: secret, message: "Login successful" },
+            { status: 200, headers: corsHeaders() }
+          );
+        }
+        return Response.json(
+          { success: false, error: "Invalid admin password" },
+          { status: 401, headers: corsHeaders() }
+        );
+      } catch {
+        return Response.json(
+          { success: false, error: "Malformed login payload" },
+          { status: 400, headers: corsHeaders() }
+        );
+      }
+    }
+
+    // CMS Get Data Route
+    if (url.pathname === "/api/cms/data" && request.method === "GET") {
+      try {
+        let cmsData = null;
+        if (env.PAGE_DATA) {
+          cmsData = await env.PAGE_DATA.get("cms_site_data", "json");
+        }
+        return Response.json(
+          { success: true, data: cmsData },
+          { status: 200, headers: corsHeaders() }
+        );
+      } catch (err) {
+        console.error("CMS Get Error:", err);
+        return Response.json(
+          { success: false, error: "Failed to fetch CMS data" },
+          { status: 500, headers: corsHeaders() }
+        );
+      }
+    }
+
+    // CMS Save Data Route
+    if (url.pathname === "/api/cms/save" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const token = authHeader ? authHeader.replace("Bearer ", "").trim() : "";
+        const validSecret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
+
+        if (token !== validSecret) {
+          return Response.json(
+            { success: false, error: "Unauthorized access" },
+            { status: 401, headers: corsHeaders() }
+          );
+        }
+
+        const body = await request.json() as { data?: any };
+        if (!body.data) {
+          return Response.json(
+            { success: false, error: "No CMS data provided" },
+            { status: 400, headers: corsHeaders() }
+          );
+        }
+
+        if (env.PAGE_DATA) {
+          await env.PAGE_DATA.put("cms_site_data", JSON.stringify(body.data));
+        }
+
+        return Response.json(
+          { success: true, message: "CMS data updated successfully" },
+          { status: 200, headers: corsHeaders() }
+        );
+      } catch (err) {
+        console.error("CMS Save Error:", err);
+        return Response.json(
+          { success: false, error: "Failed to save CMS data" },
+          { status: 500, headers: corsHeaders() }
+        );
+      }
+    }
+
+    // CMS Restore / Reset Data Route
+    if (url.pathname === "/api/cms/restore" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const token = authHeader ? authHeader.replace("Bearer ", "").trim() : "";
+        const validSecret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
+
+        if (token !== validSecret) {
+          return Response.json(
+            { success: false, error: "Unauthorized access" },
+            { status: 401, headers: corsHeaders() }
+          );
+        }
+
+        const body = await request.json() as { data?: any; resetToDefault?: boolean };
+        if (body.resetToDefault) {
+          if (env.PAGE_DATA) {
+            await env.PAGE_DATA.delete("cms_site_data");
+          }
+          return Response.json(
+            { success: true, message: "CMS data reset to system defaults" },
+            { status: 200, headers: corsHeaders() }
+          );
+        }
+
+        if (body.data && env.PAGE_DATA) {
+          await env.PAGE_DATA.put("cms_site_data", JSON.stringify(body.data));
+        }
+
+        return Response.json(
+          { success: true, message: "CMS data restored successfully" },
+          { status: 200, headers: corsHeaders() }
+        );
+      } catch (err) {
+        console.error("CMS Restore Error:", err);
+        return Response.json(
+          { success: false, error: "Failed to restore CMS data" },
+          { status: 500, headers: corsHeaders() }
+        );
+      }
     }
 
     if (url.pathname === "/api/contact" && request.method === "POST") {
@@ -202,7 +339,8 @@ Message: ${body.message}
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }
+

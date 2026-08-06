@@ -1,8 +1,13 @@
+"use client";
+
 import Image from "next/image";
-import { SITE_CONFIG } from "@/data/siteData";
+import { useCMS } from "@/lib/cmsContext";
 import { ShoppingBag, FileText, CheckCircle2, Star, ShieldCheck, Sparkles } from "lucide-react";
 
 export default function Hero() {
+  const { data } = useCMS();
+  const { siteConfig, heroText } = data;
+
   return (
     <section className="relative overflow-hidden bg-slate-950 text-white pt-14 pb-24 lg:pt-24 lg:pb-32">
       {/* Background Glow Circles */}
@@ -18,17 +23,17 @@ export default function Hero() {
             {/* Top Badge */}
             <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-slate-900/90 border border-pink-500/40 text-pink-300 text-sm font-bold shadow-xl">
               <Sparkles className="w-4 h-4 text-pink-400 animate-pulse" />
-              <span>🇮🇳 India&apos;s #1 Trusted Hearing Loss Supplement</span>
+              <span>{heroText?.badgeText || "🇮🇳 India's #1 Trusted Hearing Loss Supplement"}</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1]">
-              Restore Natural <span className="gradient-text">Hearing Clarity</span> & Nerve Health
+              {heroText?.headline || "Restore Natural Hearing Clarity & Nerve Health"}
             </h1>
 
             {/* Sub-description */}
             <p className="text-slate-300 text-lg sm:text-xl lg:text-2xl leading-relaxed max-w-3xl mx-auto lg:mx-0 font-normal">
-              Hear O Care supplies your body with 7 essential antioxidants and neuro-nutrients to protect inner ear hair cells, combat sensorineural hearing loss, and improve daily speech comprehension.
+              {heroText?.subheadline || "Hear O Care supplies your body with 7 essential antioxidants and neuro-nutrients to protect inner ear hair cells, combat sensorineural hearing loss, and improve daily speech comprehension."}
             </p>
 
             {/* Feature Bullets Grid */}
@@ -54,17 +59,17 @@ export default function Hero() {
             {/* CTAs */}
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
               <a
-                href={SITE_CONFIG.amazonUrl}
+                href={siteConfig.amazonUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-3.5 px-9 py-5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-pink-600 text-white font-black text-lg shadow-2xl shadow-pink-600/40 hover:shadow-pink-600/60 hover:scale-105 active:scale-95 transition-all group animate-pulse-glow"
               >
                 <ShoppingBag className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                <span>Shop Now on Amazon</span>
+                <span>{heroText?.ctaText || "Shop Now on Amazon"}</span>
               </a>
 
               <a
-                href={SITE_CONFIG.cataloguePdf}
+                href={siteConfig.cataloguePdf}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-extrabold text-lg transition-all hover:scale-105"
@@ -107,7 +112,7 @@ export default function Hero() {
               {/* Animated Floating Product Image */}
               <div className="relative w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-slate-950/90 border border-slate-800/90 flex items-center justify-center group p-6 shadow-inner">
                 <Image
-                  src={SITE_CONFIG.ogImage}
+                  src={siteConfig.ogImage}
                   alt="Hear O Care Supplement"
                   fill
                   className="object-contain p-4 group-hover:scale-110 transition-transform duration-500 animate-float"
@@ -122,7 +127,7 @@ export default function Hero() {
                   <p className="text-xs text-slate-400 font-medium">Sensorineural & Tinnitus Care</p>
                 </div>
                 <a
-                  href={SITE_CONFIG.amazonUrl}
+                  href={siteConfig.amazonUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-md transition-all hover:scale-105"

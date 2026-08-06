@@ -94,6 +94,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { CMSProvider } from "@/lib/cmsContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -229,10 +231,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased bg-white text-slate-900 selection:bg-pink-500 selection:text-white">
-        <SmoothScroll />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <CMSProvider>
+          <SmoothScroll />
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </CMSProvider>
       </body>
     </html>
   );

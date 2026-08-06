@@ -4,11 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ShoppingBag, Mail, ChevronRight, Sparkles } from "lucide-react";
-import { NAV_LINKS, SITE_CONFIG } from "@/data/siteData";
+import { NAV_LINKS } from "@/data/siteData";
+import { useCMS } from "@/lib/cmsContext";
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { data } = useCMS();
+  const siteConfig = data.siteConfig;
 
   return (
     <header className="sticky top-0 z-50 w-full shadow-lg transition-all duration-300">
@@ -23,14 +26,14 @@ export default function Header() {
 
           <div className="flex items-center gap-6 text-xs sm:text-sm font-medium text-slate-300">
             <a
-              href={`mailto:${SITE_CONFIG.contact.email}`}
+              href={`mailto:${siteConfig.contact.email}`}
               className="flex items-center gap-1.5 hover:text-pink-400 transition-colors"
             >
               <Mail className="w-4 h-4 text-pink-500" />
-              <span className="hidden sm:inline">{SITE_CONFIG.contact.email}</span>
+              <span className="hidden sm:inline">{siteConfig.contact.email}</span>
             </a>
             <a
-              href={SITE_CONFIG.social.facebook}
+              href={siteConfig.social.facebook}
               target="_blank"
               rel="noreferrer"
               className="hover:text-pink-400 transition-colors hidden md:inline"
@@ -38,7 +41,7 @@ export default function Header() {
               Facebook
             </a>
             <a
-              href={SITE_CONFIG.social.twitter}
+              href={siteConfig.social.twitter}
               target="_blank"
               rel="noreferrer"
               className="hover:text-pink-400 transition-colors hidden md:inline"
@@ -92,7 +95,7 @@ export default function Header() {
           {/* Action Button & Mobile Toggle */}
           <div className="flex items-center gap-4">
             <a
-              href={SITE_CONFIG.amazonUrl}
+              href={siteConfig.amazonUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-pink-600 text-white font-black text-base shadow-xl shadow-pink-600/30 hover:shadow-pink-600/50 hover:scale-105 active:scale-95 transition-all group animate-pulse-glow"
@@ -137,7 +140,7 @@ export default function Header() {
           })}
           <div className="pt-3">
             <a
-              href={SITE_CONFIG.amazonUrl}
+              href={siteConfig.amazonUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-extrabold text-lg shadow-xl hover:from-pink-700 hover:to-rose-700 transition-all text-center"

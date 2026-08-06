@@ -1,6 +1,7 @@
 "use client";
 
-import { FAQS, FAQItem } from "@/data/siteData";
+import { useCMS } from "@/lib/cmsContext";
+import { FAQItem } from "@/data/siteData";
 import { HelpCircle } from "lucide-react";
 import {
   Accordion,
@@ -9,10 +10,12 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 
-export default function FAQAccordion({ items = FAQS }: { items?: FAQItem[] }) {
+export default function FAQAccordion({ items }: { items?: FAQItem[] }) {
+  const { data } = useCMS();
+  const faqList = items || data.faqs;
   return (
     <Accordion type="single" collapsible defaultValue="0" className="w-full max-w-3xl mx-auto space-y-3">
-      {items.map((item, idx) => (
+      {faqList.map((item, idx) => (
         <AccordionItem
           key={idx}
           value={String(idx)}
