@@ -84,10 +84,25 @@ export interface CMSData {
 }
 
 export const DEFAULT_PAGES: Record<string, PageItem> = {
+  "home": {
+    id: "home",
+    slug: "/",
+    title: "Home Page",
+    badgeText: "India's #1 Trusted Hearing Loss Supplement",
+    headline: "Restore Natural Hearing Clarity & Nerve Health",
+    subheadline:
+      "Hear O Care supplies your body with 7 essential antioxidants and neuro-nutrients to protect inner ear hair cells, combat sensorineural hearing loss, and improve daily speech comprehension.",
+    content:
+      "Main landing page containing Hero Section, 7 Active Ingredients, Science Comparison Guide, Verified Customer Reviews, and Frequently Asked Questions.",
+    metaTitle: "hearing loss supplement | Hear O Care",
+    metaDescription:
+      "Looking for ways to support your hearing health? Hear O Care is a natural hearing loss supplement for sensorineural hearing loss & tinnitus.",
+    isSystemPage: true,
+  },
   "about-us": {
     id: "about-us",
     slug: "/about-us",
-    title: "About Us",
+    title: "About Us Page",
     badgeText: "Our Mission & Vision",
     headline: "About Hear O Care",
     subheadline:
@@ -102,21 +117,45 @@ export const DEFAULT_PAGES: Record<string, PageItem> = {
   "contact-us": {
     id: "contact-us",
     slug: "/contact-us",
-    title: "Contact Us",
-    badgeText: "We Are Here To Help",
-    headline: "Get in Touch with Hear O Care",
+    title: "Contact Us Page",
+    badgeText: "Customer Assistance",
+    headline: "Contact Our Support Team",
     subheadline:
       "Have questions about Hear O Care dosage, orders, or suitability for your hearing condition? Our dedicated support team is ready to assist you.",
     content:
-      "Fill out the contact form or reach out directly to support@hearocare.com. We operate Monday to Saturday, 9:00 AM to 6:00 PM IST.",
+      "Fill out the contact form below or reach out directly to support@hearocare.com. We operate Monday to Saturday, 9:00 AM to 6:00 PM IST.",
     metaTitle: "Contact Us | Hear O Care Support",
     metaDescription: "Contact Hear O Care customer support team for inquiries, product support, or dosage guidance.",
+    isSystemPage: true,
+  },
+  "faq": {
+    id: "faq",
+    slug: "/faq",
+    title: "FAQ Page",
+    badgeText: "Got Questions?",
+    headline: "Frequently Asked Questions",
+    subheadline: "Learn more about how Hear O Care supports your hearing health and daily routine.",
+    content: "Find comprehensive answers regarding dosage, duration of use, sensorineural hearing loss support, and ordering.",
+    metaTitle: "FAQ | Hear O Care",
+    metaDescription: "Find answers to frequently asked questions about Hear O Care hearing supplement.",
+    isSystemPage: true,
+  },
+  "reviews": {
+    id: "reviews",
+    slug: "/reviews",
+    title: "Reviews Page",
+    badgeText: "Verified Client Reviews",
+    headline: "Loved by Thousands Across India",
+    subheadline: "Real feedback from users who experienced noticeable hearing clarity and tinnitus relief.",
+    content: "Genuine customer reviews and ratings from users across India.",
+    metaTitle: "Customer Reviews | Hear O Care",
+    metaDescription: "Read verified customer reviews and experiences with Hear O Care hearing supplement.",
     isSystemPage: true,
   },
   "privacy-policy": {
     id: "privacy-policy",
     slug: "/privacy-policy",
-    title: "Privacy Policy",
+    title: "Privacy Policy Page",
     badgeText: "Legal Document",
     headline: "Privacy Policy",
     subheadline: "Last Updated: July 28, 2026",
@@ -129,7 +168,7 @@ export const DEFAULT_PAGES: Record<string, PageItem> = {
   "terms-and-conditions": {
     id: "terms-and-conditions",
     slug: "/terms-and-conditions",
-    title: "Terms and Conditions",
+    title: "Terms and Conditions Page",
     badgeText: "Terms of Service",
     headline: "Terms & Conditions",
     subheadline: "Last Updated: July 28, 2026",
