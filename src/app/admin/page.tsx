@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useCMS, CMSData, DEFAULT_CMS_DATA } from "@/lib/cmsContext";
+import { useCMS, CMSData, DEFAULT_CMS_DATA, PageItem } from "@/lib/cmsContext";
 import {
   Lock,
   Save,
@@ -20,9 +20,10 @@ import {
   Database,
   LogOut,
   Search,
-  CheckSquare,
   Leaf,
   Layers,
+  ExternalLink,
+  Edit,
 } from "lucide-react";
 
 export default function AdminCMSPage() {
@@ -32,10 +33,12 @@ export default function AdminCMSPage() {
   const [loginError, setLoginError] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<
-    "site" | "hero" | "ingredients" | "faqs" | "testimonials" | "blogs" | "seo" | "backup"
-  >("site");
+    "pages" | "site" | "hero" | "ingredients" | "faqs" | "testimonials" | "blogs" | "seo" | "backup"
+  >("pages");
 
   const [formData, setFormData] = useState<CMSData>(data);
+  const [selectedPageId, setSelectedPageId] = useState<string>("about-us");
+
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveMessage, setSaveMessage] = useState<{
     type: "success" | "error";
@@ -45,6 +48,8 @@ export default function AdminCMSPage() {
   // Sync formData when CMS data changes
   useEffect(() => {
     setFormData(data);
+    const firstPageId = Object.keys(data.pages)[0] || "about-us";
+    setSelectedPageId(firstPageId);
   }, [data]);
 
   // Check saved session
@@ -94,7 +99,6 @@ export default function AdminCMSPage() {
     setIsSaving(true);
     setSaveMessage(null);
 
-    // Update local React State & LocalStorage first for instant UI response
     updateData(formData);
 
     try {
@@ -111,7 +115,7 @@ export default function AdminCMSPage() {
       if (res.ok && json.success) {
         setSaveMessage({
           type: "success",
-          text: "Changes saved successfully to Cloudflare KV & Local Cache!",
+          text: "All page data saved successfully to Cloudflare KV & Local State!",
         });
       } else {
         setSaveMessage({
@@ -126,6 +130,42 @@ export default function AdminCMSPage() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Add New Custom Page
+  const handleAddNewPage = () => {
+    const newId = `page-${Date.now()}`;
+    const newSlug = `/pages/new-page-${Object.keys(formData.pages).length + 1}`;
+    const newPage: PageItem = {
+      id: newId,
+      slug: newSlug,
+      title: "New Custom Page",
+      badgeText: "Special Guide",
+      headline: "New Custom Page Headline",
+      subheadline: "Subheadline description for this new page...",
+      content: "Write your page body content here. You can add paragraphs, highlights, and guidance.",
+      metaTitle: "New Custom Page | Hear O Care",
+      metaDescription: "Meta description for the new custom page.",
+      isSystemPage: false,
+    };
+
+    const updatedPages = { ...formData.pages, [newId]: newPage };
+    setFormData({ ...formData, pages: updatedPages });
+    setSelectedPageId(newId);
+  };
+
+  // Delete Custom Page
+  const handleDeletePage = (pageId: string) => {
+    if (formData.pages[pageId]?.isSystemPage) {
+      alert("System core pages cannot be deleted.");
+      return;
+    }
+    if (confirm("Are you sure you want to delete this custom page?")) {
+      const updatedPages = { ...formData.pages };
+      delete updatedPages[pageId];
+      setFormData({ ...formData, pages: updatedPages });
+      setSelectedPageId(Object.keys(updatedPages)[0] || "");
     }
   };
 
@@ -206,7 +246,7 @@ export default function AdminCMSPage() {
               <Lock className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black tracking-tight">Hear O Care CMS</h1>
-            <p className="text-slate-400 text-sm">Enter admin password to manage pages & SEO</p>
+            <p className="text-slate-400 text-sm">Enter admin password to manage pages & content</p>
           </div>
 
           {loginError && (
@@ -240,12 +280,14 @@ export default function AdminCMSPage() {
           </form>
 
           <div className="pt-2 text-center text-xs text-slate-500 font-medium">
-            <span>Cloudflare Worker Compatible • Advanced SEO & Page Control</span>
+            <span>Cloudflare Worker Compatible • Multi-Page Builder</span>
           </div>
         </div>
       </div>
     );
   }
+
+  const selectedPage = formData.pages[selectedPageId] || Object.values(formData.pages)[0];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-8">
@@ -259,12 +301,12 @@ export default function AdminCMSPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                <span>Page Data & SEO Micro-CMS</span>
+                <span>Multi-Page CMS & Builder</span>
                 <span className="text-xs px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-500/30">
                   Cloudflare Worker Ready
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Manage all page contents, ingredients, reviews, FAQs & Advanced SEO</p>
+              <p className="text-xs text-slate-400">Add new custom pages & edit any existing page content</p>
             </div>
           </div>
 
@@ -309,6 +351,7 @@ export default function AdminCMSPage() {
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-2 scrollbar-none">
           {[
+            { id: "pages", label: `Pages Manager (${Object.keys(formData.pages).length})`, icon: Layers },
             { id: "site", label: "Site Info & Links", icon: Globe },
             { id: "seo", label: "Advanced SEO Settings", icon: Search },
             { id: "hero", label: "Hero Copy", icon: Sparkles },
@@ -337,7 +380,232 @@ export default function AdminCMSPage() {
           })}
         </div>
 
-        {/* TAB 1: Site Info & Links */}
+        {/* TAB 1: PAGES MANAGER & PAGE BUILDER */}
+        {activeTab === "pages" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Left Page List Sidebar */}
+            <div className="lg:col-span-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-pink-500" />
+                  <span>All Site Pages</span>
+                </h3>
+                <button
+                  onClick={handleAddNewPage}
+                  className="px-3.5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Page</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {Object.values(formData.pages).map((p) => {
+                  const isSelected = p.id === selectedPageId;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedPageId(p.id)}
+                      className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group ${
+                        isSelected
+                          ? "bg-pink-600 text-white border-pink-500 shadow-lg shadow-pink-600/20"
+                          : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="font-extrabold text-sm flex items-center gap-2">
+                          <span>{p.title}</span>
+                          {p.isSystemPage && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase ${isSelected ? "bg-pink-800 text-pink-100" : "bg-slate-800 text-slate-400"}`}>
+                              Core
+                            </span>
+                          )}
+                        </div>
+                        <div className={`text-xs font-mono ${isSelected ? "text-pink-200" : "text-slate-500"}`}>
+                          {p.slug}
+                        </div>
+                      </div>
+
+                      <Edit className={`w-4 h-4 opacity-50 group-hover:opacity-100 ${isSelected ? "text-white" : "text-pink-400"}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right Selected Page Editor Form */}
+            <div className="lg:col-span-8 bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
+              {selectedPage ? (
+                <>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-800">
+                    <div>
+                      <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                        <span>Editing Page:</span>
+                        <span className="text-pink-400">{selectedPage.title}</span>
+                      </h3>
+                      <p className="text-xs text-slate-400">URL Slug: <code className="text-pink-300 font-mono">{selectedPage.slug}</code></p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={selectedPage.slug}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold flex items-center gap-2 border border-slate-700"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Preview Live Page</span>
+                      </a>
+
+                      {!selectedPage.isSystemPage && (
+                        <button
+                          onClick={() => handleDeletePage(selectedPage.id)}
+                          className="px-3.5 py-2 rounded-xl bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 text-xs font-extrabold flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Page</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-400 uppercase">Page Title</label>
+                        <input
+                          type="text"
+                          value={selectedPage.title}
+                          onChange={(e) => {
+                            const updated = { ...formData.pages };
+                            updated[selectedPage.id].title = e.target.value;
+                            setFormData({ ...formData, pages: updated });
+                          }}
+                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-400 uppercase">URL Slug</label>
+                        <input
+                          type="text"
+                          value={selectedPage.slug}
+                          disabled={selectedPage.isSystemPage}
+                          onChange={(e) => {
+                            const updated = { ...formData.pages };
+                            updated[selectedPage.id].slug = e.target.value;
+                            setFormData({ ...formData, pages: updated });
+                          }}
+                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-sm disabled:opacity-60"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-400 uppercase">Top Badge Text</label>
+                        <input
+                          type="text"
+                          value={selectedPage.badgeText || ""}
+                          onChange={(e) => {
+                            const updated = { ...formData.pages };
+                            updated[selectedPage.id].badgeText = e.target.value;
+                            setFormData({ ...formData, pages: updated });
+                          }}
+                          placeholder="e.g. Special Guide"
+                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-400 uppercase">Page Headline</label>
+                        <input
+                          type="text"
+                          value={selectedPage.headline || ""}
+                          onChange={(e) => {
+                            const updated = { ...formData.pages };
+                            updated[selectedPage.id].headline = e.target.value;
+                            setFormData({ ...formData, pages: updated });
+                          }}
+                          placeholder="Main Heading"
+                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-extrabold text-slate-400 uppercase">Subheadline / Intro Paragraph</label>
+                      <textarea
+                        rows={2}
+                        value={selectedPage.subheadline || ""}
+                        onChange={(e) => {
+                          const updated = { ...formData.pages };
+                          updated[selectedPage.id].subheadline = e.target.value;
+                          setFormData({ ...formData, pages: updated });
+                        }}
+                        placeholder="Subheadline intro..."
+                        className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-extrabold text-slate-400 uppercase">Full Page Body Content</label>
+                      <textarea
+                        rows={10}
+                        value={selectedPage.content || ""}
+                        onChange={(e) => {
+                          const updated = { ...formData.pages };
+                          updated[selectedPage.id].content = e.target.value;
+                          setFormData({ ...formData, pages: updated });
+                        }}
+                        placeholder="Type page content paragraphs here. Use ### Section Heading for subheaders..."
+                        className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium leading-relaxed font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-400 uppercase">Page Meta Title (SEO)</label>
+                        <input
+                          type="text"
+                          value={selectedPage.metaTitle || ""}
+                          onChange={(e) => {
+                            const updated = { ...formData.pages };
+                            updated[selectedPage.id].metaTitle = e.target.value;
+                            setFormData({ ...formData, pages: updated });
+                          }}
+                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold text-slate-400 uppercase">Page Meta Description (SEO)</label>
+                        <input
+                          type="text"
+                          value={selectedPage.metaDescription || ""}
+                          onChange={(e) => {
+                            const updated = { ...formData.pages };
+                            updated[selectedPage.id].metaDescription = e.target.value;
+                            setFormData({ ...formData, pages: updated });
+                          }}
+                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-20 text-slate-500">
+                  Select a page from the sidebar or click "+ Add Page" to create a new one.
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: Site Info & Links */}
         {activeTab === "site" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -476,7 +744,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 2: ADVANCED SEO SETTINGS */}
+        {/* TAB 3: ADVANCED SEO SETTINGS */}
         {activeTab === "seo" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-8">
             <div className="flex justify-between items-center">
@@ -596,60 +864,11 @@ export default function AdminCMSPage() {
                   className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
                 />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Google Analytics Tracking ID (e.g. G-XXXXX)</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.googleAnalyticsId}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, googleAnalyticsId: e.target.value },
-                    })
-                  }
-                  placeholder="G-XXXXXXXXXX"
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Facebook Pixel ID</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.facebookPixelId}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, facebookPixelId: e.target.value },
-                    })
-                  }
-                  placeholder="1234567890"
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2 pt-2">
-                <label className="flex items-center gap-3 text-sm font-extrabold text-white cursor-pointer bg-slate-950 p-4 rounded-xl border border-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={formData.seoSettings.allowIndexing}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        seoSettings: { ...formData.seoSettings, allowIndexing: e.target.checked },
-                      })
-                    }
-                    className="w-5 h-5 text-pink-600 rounded"
-                  />
-                  <span>Allow Search Engines Indexing (index, follow)</span>
-                </label>
-              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 3: Hero Copy */}
+        {/* TAB 4: Hero Copy */}
         {activeTab === "hero" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -721,7 +940,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 4: Ingredients Manager */}
+        {/* TAB 5: Ingredients Manager */}
         {activeTab === "ingredients" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
@@ -809,7 +1028,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 5: FAQs Manager */}
+        {/* TAB 6: FAQs Manager */}
         {activeTab === "faqs" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
@@ -879,7 +1098,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 6: Testimonials Manager */}
+        {/* TAB 7: Testimonials Manager */}
         {activeTab === "testimonials" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
@@ -969,7 +1188,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 7: Blog Posts Manager */}
+        {/* TAB 8: Blog Posts Manager */}
         {activeTab === "blogs" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -1007,7 +1226,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 8: Backup & Restore */}
+        {/* TAB 9: Backup & Restore */}
         {activeTab === "backup" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-8">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -1031,7 +1250,7 @@ export default function AdminCMSPage() {
                 <Download className="w-8 h-8 text-pink-500" />
                 <h4 className="font-extrabold text-white text-base">Export Backup JSON</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Download full copy of your CMS data & SEO settings to keep a local backup file on your computer.
+                  Download full copy of your CMS data, all custom pages & SEO settings to keep a local backup file on your computer.
                 </p>
                 <button
                   onClick={handleDownloadBackup}
@@ -1046,7 +1265,7 @@ export default function AdminCMSPage() {
                 <Upload className="w-8 h-8 text-emerald-400" />
                 <h4 className="font-extrabold text-white text-base">Restore from File</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Upload a previously saved `.json` backup file to instantly restore CMS state.
+                  Upload a previously saved `.json` backup file to instantly restore CMS state & all custom pages.
                 </p>
                 <label className="w-full py-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-extrabold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center block">
                   Select Backup JSON
@@ -1064,7 +1283,7 @@ export default function AdminCMSPage() {
                 <RotateCcw className="w-8 h-8 text-amber-500" />
                 <h4 className="font-extrabold text-white text-base">Reset to System Defaults</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Revert all edited fields back to the original default static configuration.
+                  Revert all edited fields & pages back to the original default static configuration.
                 </p>
                 <button
                   onClick={handleResetToDefaults}

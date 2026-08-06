@@ -1,13 +1,18 @@
-import { SITE_CONFIG } from "@/data/siteData";
+"use client";
+
+import { useCMS } from "@/lib/cmsContext";
 import { ShieldCheck, Award, HeartHandshake, Sparkles, ShoppingBag, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-export const metadata = {
-  title: "About Us",
-  description: "Learn about Hear O Care's mission to support hearing health and combat sensorineural hearing loss with high-potency antioxidants.",
-};
-
 export default function AboutUsPage() {
+  const { data } = useCMS();
+  const pageData = data.pages["about-us"] || {
+    badgeText: "Our Mission & Vision",
+    headline: "About Hear O Care",
+    subheadline: "Dedicated to bringing science-backed, natural nutritional solutions to individuals experiencing sensorineural hearing loss and tinnitus across India.",
+    content: "",
+  };
+
   return (
     <div className="bg-white py-20 sm:py-28">
       <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 space-y-20">
@@ -16,13 +21,13 @@ export default function AboutUsPage() {
         <div className="text-center max-w-4xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-pink-100 text-pink-700 font-extrabold text-xs uppercase tracking-wider">
             <Sparkles className="w-4 h-4 text-pink-600" />
-            <span>Our Mission & Vision</span>
+            <span>{pageData.badgeText}</span>
           </div>
           <h1 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">
-            About <span className="gradient-text">Hear O Care</span>
+            {pageData.headline}
           </h1>
           <p className="text-slate-600 text-lg sm:text-xl leading-relaxed">
-            Dedicated to bringing science-backed, natural nutritional solutions to individuals experiencing sensorineural hearing loss and tinnitus across India.
+            {pageData.subheadline}
           </p>
         </div>
 

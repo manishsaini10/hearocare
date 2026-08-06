@@ -1,11 +1,17 @@
+"use client";
+
+import { useCMS } from "@/lib/cmsContext";
 import { ShieldCheck } from "lucide-react";
 
-export const metadata = {
-  title: "Privacy Policy | Hear O Care",
-  description: "Read the official Privacy Policy for Hear O Care. Learn how we collect, protect, and handle your information.",
-};
-
 export default function PrivacyPolicyPage() {
+  const { data } = useCMS();
+  const pageData = data.pages["privacy-policy"] || {
+    badgeText: "Legal Document",
+    headline: "Privacy Policy",
+    subheadline: "Last Updated: July 28, 2026",
+    content: "",
+  };
+
   return (
     <div className="bg-slate-50 py-20 sm:py-28">
       <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 space-y-12">
@@ -14,13 +20,13 @@ export default function PrivacyPolicyPage() {
         <div className="text-center max-w-4xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-pink-100 text-pink-700 font-extrabold text-xs uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4 text-pink-600" />
-            <span>Legal Document</span>
+            <span>{pageData.badgeText}</span>
           </div>
           <h1 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">
-            Privacy <span className="gradient-text">Policy</span>
+            {pageData.headline}
           </h1>
           <p className="text-slate-600 text-lg font-medium">
-            Last Updated: July 28, 2026
+            {pageData.subheadline}
           </p>
         </div>
 
