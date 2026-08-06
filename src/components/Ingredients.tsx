@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { INGREDIENTS } from "@/data/siteData";
+import { useCMS } from "@/lib/cmsContext";
 import { Sparkles, Activity } from "lucide-react";
 
 const containerVariants = {
@@ -27,6 +27,9 @@ const cardVariants = {
 };
 
 export default function Ingredients() {
+  const { data } = useCMS();
+  const ingredients = data.ingredients;
+
   return (
     <section className="py-24 bg-slate-50 relative overflow-hidden">
       <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16">
@@ -44,7 +47,7 @@ export default function Ingredients() {
           </div>
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
-            7 High-Potency <span className="gradient-text">Active Ingredients</span>
+            {ingredients.length} High-Potency <span className="gradient-text">Active Ingredients</span>
           </h2>
 
           <p className="text-slate-600 text-lg sm:text-xl leading-relaxed font-normal">
@@ -78,7 +81,7 @@ export default function Ingredients() {
           viewport={{ once: true, margin: "-50px" }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
         >
-          {INGREDIENTS.map((item, idx) => (
+          {ingredients.map((item, idx) => (
             <motion.div
               key={idx}
               variants={cardVariants}

@@ -20,6 +20,23 @@ export interface HeroTextConfig {
   ctaText: string;
 }
 
+export interface AdvancedSEOSettings {
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  twitterHandle: string;
+  canonicalUrl: string;
+  googleVerification: string;
+  bingVerification: string;
+  yandexVerification: string;
+  googleAnalyticsId: string;
+  facebookPixelId: string;
+  allowIndexing: boolean;
+}
+
 export interface CMSData {
   siteConfig: typeof SITE_CONFIG;
   ingredients: Ingredient[];
@@ -28,6 +45,7 @@ export interface CMSData {
   disclaimer: string;
   heroText: HeroTextConfig;
   blogPosts: BlogPost[];
+  seoSettings: AdvancedSEOSettings;
 }
 
 export const DEFAULT_CMS_DATA: CMSData = {
@@ -44,6 +62,22 @@ export const DEFAULT_CMS_DATA: CMSData = {
     ctaText: "Buy Authentic on Amazon",
   },
   blogPosts: defaultBlogPosts,
+  seoSettings: {
+    metaTitle: "hearing loss supplement | Hear O Care",
+    metaDescription: SITE_CONFIG.description,
+    metaKeywords: SITE_CONFIG.keywords,
+    ogTitle: "Hear O Care - Restoring Hearing Clarity Naturally",
+    ogDescription: SITE_CONFIG.description,
+    ogImage: SITE_CONFIG.ogImage,
+    twitterHandle: "@hearocare",
+    canonicalUrl: SITE_CONFIG.url,
+    googleVerification: "YOUR_GOOGLE_SEARCH_CONSOLE_CODE",
+    bingVerification: "YOUR_BING_VERIFICATION_CODE",
+    yandexVerification: "YOUR_YANDEX_CODE",
+    googleAnalyticsId: "",
+    facebookPixelId: "",
+    allowIndexing: true,
+  },
 };
 
 interface CMSContextType {
@@ -76,7 +110,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          setData(json.data);
+          setData({
+            ...DEFAULT_CMS_DATA,
+            ...json.data,
+            siteConfig: { ...DEFAULT_CMS_DATA.siteConfig, ...json.data.siteConfig },
+            seoSettings: { ...DEFAULT_CMS_DATA.seoSettings, ...json.data.seoSettings },
+            heroText: { ...DEFAULT_CMS_DATA.heroText, ...json.data.heroText },
+          });
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(json.data));
           } catch {}
@@ -84,22 +124,27 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
     } catch {
-      // Offline or dynamic worker API unavailable, keep cached / default data
+      // Offline fallback
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // 1. Try local cache first for instant UI response
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (cached) {
-        setData(JSON.parse(cached));
+        const parsed = JSON.parse(cached);
+        setData({
+          ...DEFAULT_CMS_DATA,
+          ...parsed,
+          siteConfig: { ...DEFAULT_CMS_DATA.siteConfig, ...parsed.siteConfig },
+          seoSettings: { ...DEFAULT_CMS_DATA.seoSettings, ...parsed.seoSettings },
+          heroText: { ...DEFAULT_CMS_DATA.heroText, ...parsed.heroText },
+        });
       }
     } catch {}
 
-    // 2. Fetch fresh data from Worker API
     fetchRemoteData();
   }, []);
 

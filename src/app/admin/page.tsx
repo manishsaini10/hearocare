@@ -13,23 +13,26 @@ import {
   Check,
   AlertCircle,
   Sparkles,
-  LayoutDashboard,
   HelpCircle,
   MessageSquare,
   FileText,
   Globe,
   Database,
   LogOut,
+  Search,
+  CheckSquare,
+  Leaf,
+  Layers,
 } from "lucide-react";
 
 export default function AdminCMSPage() {
-  const { data, updateData, resetData, refetchData } = useCMS();
+  const { data, updateData, resetData } = useCMS();
   const [token, setToken] = useState<string>("");
   const [passwordInput, setPasswordInput] = useState<string>("");
   const [loginError, setLoginError] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<
-    "site" | "hero" | "faqs" | "testimonials" | "blogs" | "backup"
+    "site" | "hero" | "ingredients" | "faqs" | "testimonials" | "blogs" | "seo" | "backup"
   >("site");
 
   const [formData, setFormData] = useState<CMSData>(data);
@@ -108,7 +111,7 @@ export default function AdminCMSPage() {
       if (res.ok && json.success) {
         setSaveMessage({
           type: "success",
-          text: "Changes saved successfully to Cloudflare KV & Local State!",
+          text: "Changes saved successfully to Cloudflare KV & Local Cache!",
         });
       } else {
         setSaveMessage({
@@ -148,11 +151,12 @@ export default function AdminCMSPage() {
       try {
         const parsed = JSON.parse(evt.target?.result as string);
         if (parsed && parsed.siteConfig) {
-          setFormData(parsed);
-          updateData(parsed);
+          const merged = { ...DEFAULT_CMS_DATA, ...parsed };
+          setFormData(merged);
+          updateData(merged);
           setSaveMessage({
             type: "success",
-            text: "Backup file loaded successfully! Don't forget to click Save Changes.",
+            text: "Backup file loaded successfully! Click Save Changes to commit.",
           });
         } else {
           alert("Invalid backup file format.");
@@ -202,7 +206,7 @@ export default function AdminCMSPage() {
               <Lock className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black tracking-tight">Hear O Care CMS</h1>
-            <p className="text-slate-400 text-sm">Enter admin password to manage pages & content</p>
+            <p className="text-slate-400 text-sm">Enter admin password to manage pages & SEO</p>
           </div>
 
           {loginError && (
@@ -236,7 +240,7 @@ export default function AdminCMSPage() {
           </form>
 
           <div className="pt-2 text-center text-xs text-slate-500 font-medium">
-            <span>Cloudflare Worker Compatible • Fast & Secure</span>
+            <span>Cloudflare Worker Compatible • Advanced SEO & Page Control</span>
           </div>
         </div>
       </div>
@@ -255,12 +259,12 @@ export default function AdminCMSPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                <span>Page Data Micro-CMS</span>
+                <span>Page Data & SEO Micro-CMS</span>
                 <span className="text-xs px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-500/30">
                   Cloudflare Worker Ready
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Manage titles, FAQs, Testimonials, and Page text</p>
+              <p className="text-xs text-slate-400">Manage all page contents, ingredients, reviews, FAQs & Advanced SEO</p>
             </div>
           </div>
 
@@ -271,7 +275,7 @@ export default function AdminCMSPage() {
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-extrabold text-sm shadow-lg hover:scale-105 transition-all disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+              <span>{isSaving ? "Saving..." : "Save All Changes"}</span>
             </button>
 
             <button
@@ -306,7 +310,9 @@ export default function AdminCMSPage() {
         <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-2 scrollbar-none">
           {[
             { id: "site", label: "Site Info & Links", icon: Globe },
+            { id: "seo", label: "Advanced SEO Settings", icon: Search },
             { id: "hero", label: "Hero Copy", icon: Sparkles },
+            { id: "ingredients", label: `Ingredients (${formData.ingredients.length})`, icon: Leaf },
             { id: "faqs", label: `FAQs (${formData.faqs.length})`, icon: HelpCircle },
             { id: "testimonials", label: `Reviews (${formData.testimonials.length})`, icon: MessageSquare },
             { id: "blogs", label: `Blogs (${formData.blogPosts.length})`, icon: FileText },
@@ -336,7 +342,7 @@ export default function AdminCMSPage() {
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
               <Globe className="w-5 h-5 text-pink-500" />
-              <span>General Site Information</span>
+              <span>General Site Information & Contact Links</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -371,7 +377,7 @@ export default function AdminCMSPage() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Site Description (SEO)</label>
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Site Description</label>
                 <textarea
                   rows={3}
                   value={formData.siteConfig.description}
@@ -420,11 +426,230 @@ export default function AdminCMSPage() {
                   className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
                 />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Office Address</label>
+                <input
+                  type="text"
+                  value={formData.siteConfig.contact.address}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      siteConfig: {
+                        ...formData.siteConfig,
+                        contact: { ...formData.siteConfig.contact, address: e.target.value },
+                      },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Working Hours</label>
+                <input
+                  type="text"
+                  value={formData.siteConfig.contact.workingHours}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      siteConfig: {
+                        ...formData.siteConfig,
+                        contact: { ...formData.siteConfig.contact, workingHours: e.target.value },
+                      },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Website Disclaimer Copy</label>
+                <textarea
+                  rows={3}
+                  value={formData.disclaimer}
+                  onChange={(e) => setFormData({ ...formData, disclaimer: e.target.value })}
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: Hero Copy */}
+        {/* TAB 2: ADVANCED SEO SETTINGS */}
+        {activeTab === "seo" && (
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <Search className="w-5 h-5 text-pink-500" />
+                  <span>Advanced SEO & Meta Verification Settings</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Configure meta tags, OpenGraph images, Google Search Console, and Webmaster Verification
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Meta Title</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.metaTitle}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, metaTitle: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Meta Description</label>
+                <textarea
+                  rows={3}
+                  value={formData.seoSettings.metaDescription}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, metaDescription: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Meta Keywords (Comma Separated)</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.metaKeywords}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, metaKeywords: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">OpenGraph Image Path / URL</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.ogImage}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, ogImage: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Canonical Base URL</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.canonicalUrl}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, canonicalUrl: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Google Search Console Verification Code</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.googleVerification}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, googleVerification: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Bing Webmaster Verification Code</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.bingVerification}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, bingVerification: e.target.value },
+                    })
+                  }
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Google Analytics Tracking ID (e.g. G-XXXXX)</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.googleAnalyticsId}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, googleAnalyticsId: e.target.value },
+                    })
+                  }
+                  placeholder="G-XXXXXXXXXX"
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Facebook Pixel ID</label>
+                <input
+                  type="text"
+                  value={formData.seoSettings.facebookPixelId}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      seoSettings: { ...formData.seoSettings, facebookPixelId: e.target.value },
+                    })
+                  }
+                  placeholder="1234567890"
+                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2 pt-2">
+                <label className="flex items-center gap-3 text-sm font-extrabold text-white cursor-pointer bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={formData.seoSettings.allowIndexing}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        seoSettings: { ...formData.seoSettings, allowIndexing: e.target.checked },
+                      })
+                    }
+                    className="w-5 h-5 text-pink-600 rounded"
+                  />
+                  <span>Allow Search Engines Indexing (index, follow)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: Hero Copy */}
         {activeTab === "hero" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -496,7 +721,95 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 3: FAQs Manager */}
+        {/* TAB 4: Ingredients Manager */}
+        {activeTab === "ingredients" && (
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-pink-500" />
+                <span>Active Supplement Ingredients</span>
+              </h3>
+              <button
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    ingredients: [
+                      ...formData.ingredients,
+                      {
+                        name: "New Ingredient",
+                        description: "Description of nutrient benefits...",
+                        color: "#e92467",
+                        iconBg: "bg-pink-100 text-pink-600 border-pink-200",
+                      },
+                    ],
+                  })
+                }
+                className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Ingredient</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {formData.ingredients.map((ing, idx) => (
+                <div key={idx} className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-extrabold text-pink-400 uppercase">Ingredient #{idx + 1}</span>
+                    <button
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          ingredients: formData.ingredients.filter((_, i) => i !== idx),
+                        })
+                      }
+                      className="p-2 text-slate-500 hover:text-red-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      value={ing.name}
+                      onChange={(e) => {
+                        const updated = [...formData.ingredients];
+                        updated[idx].name = e.target.value;
+                        setFormData({ ...formData, ingredients: updated });
+                      }}
+                      placeholder="Name"
+                      className="col-span-2 p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
+                    />
+                    <input
+                      type="text"
+                      value={ing.color}
+                      onChange={(e) => {
+                        const updated = [...formData.ingredients];
+                        updated[idx].color = e.target.value;
+                        setFormData({ ...formData, ingredients: updated });
+                      }}
+                      placeholder="#e92467"
+                      className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-mono text-xs"
+                    />
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={ing.description}
+                    onChange={(e) => {
+                      const updated = [...formData.ingredients];
+                      updated[idx].description = e.target.value;
+                      setFormData({ ...formData, ingredients: updated });
+                    }}
+                    placeholder="Description"
+                    className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: FAQs Manager */}
         {activeTab === "faqs" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
@@ -566,7 +879,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 4: Testimonials Manager */}
+        {/* TAB 6: Testimonials Manager */}
         {activeTab === "testimonials" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
@@ -656,7 +969,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 5: Blog Posts Manager */}
+        {/* TAB 7: Blog Posts Manager */}
         {activeTab === "blogs" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -694,7 +1007,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 6: Backup & Restore */}
+        {/* TAB 8: Backup & Restore */}
         {activeTab === "backup" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-8">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -718,7 +1031,7 @@ export default function AdminCMSPage() {
                 <Download className="w-8 h-8 text-pink-500" />
                 <h4 className="font-extrabold text-white text-base">Export Backup JSON</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Download full copy of your CMS data to keep a local backup file on your computer.
+                  Download full copy of your CMS data & SEO settings to keep a local backup file on your computer.
                 </p>
                 <button
                   onClick={handleDownloadBackup}
