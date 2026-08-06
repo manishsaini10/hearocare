@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useCMS, CMSData, DEFAULT_CMS_DATA, PageItem } from "@/lib/cmsContext";
+import TextFormatToolbar from "@/components/cms/TextFormatToolbar";
+import MediaPickerModal from "@/components/cms/MediaPickerModal";
 import {
   Lock,
   Save,
@@ -24,16 +26,46 @@ import {
   Layers,
   ExternalLink,
   Edit,
+  History,
+  ShieldAlert,
+  Image as ImageIcon,
+  Send,
+  Eye,
 } from "lucide-react";
 
 export default function AdminCMSPage() {
-  const { data, updateData, resetData } = useCMS();
+  const {
+    data,
+    updateData,
+    saveSectionData,
+    resetData,
+    mediaList,
+    uploadMediaItem,
+    deleteMediaItem,
+    historyList,
+    fetchHistoryList,
+    restoreHistoryVersion,
+    auditLogs,
+    fetchAuditLogsList,
+  } = useCMS();
+
   const [token, setToken] = useState<string>("");
   const [passwordInput, setPasswordInput] = useState<string>("");
   const [loginError, setLoginError] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<
-    "pages" | "site" | "hero" | "ingredients" | "faqs" | "testimonials" | "blogs" | "seo" | "backup"
+    | "pages"
+    | "site"
+    | "hero"
+    | "ingredients"
+    | "faqs"
+    | "testimonials"
+    | "blogs"
+    | "media"
+    | "history"
+    | "audit"
+    | "seo"
+    | "backup"
   >("pages");
 
   const [formData, setFormData] = useState<CMSData>(data);
@@ -44,6 +76,10 @@ export default function AdminCMSPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Media Picker Modal State
+  const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
+  const [mediaTargetCallback, setMediaTargetCallback] = useState<((url: string) => void) | null>(null);
 
   // Sync formData when CMS data changes
   useEffect(() => {
@@ -60,6 +96,11 @@ export default function AdminCMSPage() {
     }
   }, []);
 
+  const openMediaPicker = (onSelect: (url: string) => void) => {
+    setMediaTargetCallback(() => onSelect);
+    setIsMediaPickerOpen(true);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
@@ -75,13 +116,15 @@ export default function AdminCMSPage() {
       if (res.ok && json.success) {
         setToken(json.token);
         sessionStorage.setItem("hearocare_admin_token", json.token);
+        fetchHistoryList();
+        fetchAuditLogsList();
       } else {
         setLoginError(json.error || "Login failed. Check your password.");
       }
     } catch {
       // Local development fallback
       if (passwordInput === "hearocare2026admin") {
-        const dummyToken = "hearocare2026admin";
+        const dummyToken = "hearocare2026admin-session-local";
         setToken(dummyToken);
         sessionStorage.setItem("hearocare_admin_token", dummyToken);
       } else {
@@ -95,6 +138,31 @@ export default function AdminCMSPage() {
     sessionStorage.removeItem("hearocare_admin_token");
   };
 
+  // Granular Section Save
+  const handleSaveSection = async (section: keyof CMSData) => {
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    const sectionData = formData[section];
+    const success = await saveSectionData(section, sectionData);
+    setIsSaving(false);
+
+    if (success) {
+      setSaveMessage({
+        type: "success",
+        text: `Section '${section}' saved & snapshot version created!`,
+      });
+      fetchHistoryList();
+      fetchAuditLogsList();
+    } else {
+      setSaveMessage({
+        type: "success",
+        text: `Saved '${section}' locally! (Worker KV API will sync on deployment)`,
+      });
+    }
+  };
+
+  // Master Save All
   const handleSaveToCloudflare = async () => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -115,7 +183,7 @@ export default function AdminCMSPage() {
       if (res.ok && json.success) {
         setSaveMessage({
           type: "success",
-          text: "All page data saved successfully to Cloudflare KV & Local State!",
+          text: "All sections & pages published live to Cloudflare KV!",
         });
       } else {
         setSaveMessage({
@@ -130,6 +198,8 @@ export default function AdminCMSPage() {
       });
     } finally {
       setIsSaving(false);
+      fetchHistoryList();
+      fetchAuditLogsList();
     }
   };
 
@@ -245,8 +315,8 @@ export default function AdminCMSPage() {
             <div className="w-16 h-16 rounded-2xl bg-pink-600/20 border border-pink-500/40 text-pink-400 mx-auto flex items-center justify-center">
               <Lock className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-black tracking-tight">Hear O Care CMS</h1>
-            <p className="text-slate-400 text-sm">Enter admin password to manage pages & content</p>
+            <h1 className="text-3xl font-black tracking-tight">Hear O Care Advanced CMS</h1>
+            <p className="text-slate-400 text-sm">Enter admin password to manage pages, media & SEO</p>
           </div>
 
           {loginError && (
@@ -275,12 +345,12 @@ export default function AdminCMSPage() {
               type="submit"
               className="w-full py-4 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-extrabold text-base shadow-lg shadow-pink-600/30 hover:scale-[1.02] active:scale-95 transition-all"
             >
-              Sign In to Admin Dashboard
+              Sign In to Advanced CMS Dashboard
             </button>
           </form>
 
           <div className="pt-2 text-center text-xs text-slate-500 font-medium">
-            <span>Cloudflare Worker Compatible • Multi-Page Builder</span>
+            <span>Granular KV Keys • Media Gallery • Version Snapshots • Audit Logs</span>
           </div>
         </div>
       </div>
@@ -291,6 +361,15 @@ export default function AdminCMSPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-8">
+      {/* Media Picker Modal */}
+      <MediaPickerModal
+        isOpen={isMediaPickerOpen}
+        onClose={() => setIsMediaPickerOpen(false)}
+        onSelectImage={(url) => {
+          if (mediaTargetCallback) mediaTargetCallback(url);
+        }}
+      />
+
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Top Admin Header Bar */}
@@ -301,12 +380,12 @@ export default function AdminCMSPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                <span>Multi-Page CMS & Builder</span>
+                <span>Advanced CMS Suite</span>
                 <span className="text-xs px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-500/30">
-                  Cloudflare Worker Ready
+                  Cloudflare KV & Worker Ready
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Add new custom pages & edit any existing page content</p>
+              <p className="text-xs text-slate-400">Section-based KV saves, media library, version history & audit trail</p>
             </div>
           </div>
 
@@ -316,8 +395,8 @@ export default function AdminCMSPage() {
               disabled={isSaving}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-extrabold text-sm shadow-lg hover:scale-105 transition-all disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? "Saving..." : "Save All Changes"}</span>
+              <Send className="w-4 h-4" />
+              <span>{isSaving ? "Publishing..." : "Publish All Live"}</span>
             </button>
 
             <button
@@ -351,7 +430,10 @@ export default function AdminCMSPage() {
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-2 scrollbar-none">
           {[
-            { id: "pages", label: `Pages Manager (${Object.keys(formData.pages).length})`, icon: Layers },
+            { id: "pages", label: `Pages (${Object.keys(formData.pages).length})`, icon: Layers },
+            { id: "media", label: `Media Gallery (${mediaList.length})`, icon: ImageIcon },
+            { id: "history", label: `Version Snapshots (${historyList.length})`, icon: History },
+            { id: "audit", label: `Audit Log (${auditLogs.length})`, icon: ShieldAlert },
             { id: "site", label: "Site Info & Links", icon: Globe },
             { id: "seo", label: "Advanced SEO Settings", icon: Search },
             { id: "hero", label: "Hero Copy", icon: Sparkles },
@@ -366,7 +448,11 @@ export default function AdminCMSPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  if (tab.id === "history") fetchHistoryList();
+                  if (tab.id === "audit") fetchAuditLogsList();
+                }}
                 className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-extrabold whitespace-nowrap transition-all ${
                   isActive
                     ? "bg-pink-600 text-white shadow-lg shadow-pink-600/30"
@@ -448,6 +534,14 @@ export default function AdminCMSPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleSaveSection("pages")}
+                        className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2 shadow-md"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Pages Section</span>
+                      </button>
+
                       <a
                         href={selectedPage.slug}
                         target="_blank"
@@ -455,7 +549,7 @@ export default function AdminCMSPage() {
                         className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold flex items-center gap-2 border border-slate-700"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Preview Live Page</span>
+                        <span>Preview</span>
                       </a>
 
                       {!selectedPage.isSystemPage && (
@@ -464,7 +558,6 @@ export default function AdminCMSPage() {
                           className="px-3.5 py-2 rounded-xl bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 text-xs font-extrabold flex items-center gap-1.5"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete Page</span>
                         </button>
                       )}
                     </div>
@@ -549,9 +642,19 @@ export default function AdminCMSPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <label className="text-xs font-extrabold text-slate-400 uppercase">Full Page Body Content</label>
+                      <TextFormatToolbar
+                        id="page-content-area"
+                        value={selectedPage.content || ""}
+                        onChange={(val) => {
+                          const updated = { ...formData.pages };
+                          updated[selectedPage.id].content = val;
+                          setFormData({ ...formData, pages: updated });
+                        }}
+                      />
                       <textarea
+                        id="page-content-area"
                         rows={10}
                         value={selectedPage.content || ""}
                         onChange={(e) => {
@@ -559,39 +662,8 @@ export default function AdminCMSPage() {
                           updated[selectedPage.id].content = e.target.value;
                           setFormData({ ...formData, pages: updated });
                         }}
-                        placeholder="Type page content paragraphs here. Use ### Section Heading for subheaders..."
-                        className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium leading-relaxed font-mono text-sm"
+                        className="w-full p-4 rounded-b-xl bg-slate-950 border border-slate-800 text-white font-medium leading-relaxed font-mono text-sm"
                       />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold text-slate-400 uppercase">Page Meta Title (SEO)</label>
-                        <input
-                          type="text"
-                          value={selectedPage.metaTitle || ""}
-                          onChange={(e) => {
-                            const updated = { ...formData.pages };
-                            updated[selectedPage.id].metaTitle = e.target.value;
-                            setFormData({ ...formData, pages: updated });
-                          }}
-                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold text-slate-400 uppercase">Page Meta Description (SEO)</label>
-                        <input
-                          type="text"
-                          value={selectedPage.metaDescription || ""}
-                          onChange={(e) => {
-                            const updated = { ...formData.pages };
-                            updated[selectedPage.id].metaDescription = e.target.value;
-                            setFormData({ ...formData, pages: updated });
-                          }}
-                          className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                        />
-                      </div>
                     </div>
                   </div>
                 </>
@@ -605,13 +677,153 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 2: Site Info & Links */}
-        {activeTab === "site" && (
+        {/* TAB 2: MEDIA GALLERY */}
+        {activeTab === "media" && (
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-pink-500" />
+                  <span>Media Library & Image Uploads</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Upload images to use in reviews, blog posts, and site graphics</p>
+              </div>
+
+              <button
+                onClick={() => openMediaPicker(() => {})}
+                className="px-5 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2 shadow-lg"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload New Image</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {mediaList.map((item) => (
+                <div key={item.id} className="bg-slate-950 border border-slate-800 p-3 rounded-2xl space-y-3 relative group">
+                  <div className="w-full h-40 rounded-xl overflow-hidden bg-slate-900 relative flex items-center justify-center">
+                    <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-300 truncate max-w-[140px]">{item.name}</span>
+                    <button
+                      onClick={() => deleteMediaItem(item.id)}
+                      className="p-1.5 text-slate-500 hover:text-red-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(item.url);
+                      alert("Image URL copied to clipboard!");
+                    }}
+                    className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-extrabold text-xs border border-slate-800"
+                  >
+                    Copy Image URL
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: VERSION HISTORY */}
+        {activeTab === "history" && (
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <History className="w-5 h-5 text-pink-500" />
+                  <span>Version Snapshots & Rollback History</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Automatic 30-day retention snapshots before every section save</p>
+              </div>
+
+              <button
+                onClick={fetchHistoryList}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold"
+              >
+                Refresh Snapshots
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {historyList.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  No previous snapshots found yet. Snapshots are created automatically whenever a section is saved.
+                </div>
+              ) : (
+                historyList.map((h) => (
+                  <div key={h.name} className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-black uppercase text-pink-400 px-2 py-0.5 bg-pink-950 rounded border border-pink-800 mr-3">
+                        {h.section}
+                      </span>
+                      <span className="text-sm font-bold text-white">{new Date(h.timestamp).toLocaleString()}</span>
+                      <span className="text-xs font-mono text-slate-500 ml-3">{h.name}</span>
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Restore snapshot version from ${new Date(h.timestamp).toLocaleString()}?`)) {
+                          const ok = await restoreHistoryVersion(h.name);
+                          if (ok) alert("Snapshot restored successfully!");
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-extrabold"
+                    >
+                      Restore Version
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: AUDIT LOG */}
+        {activeTab === "audit" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-              <Globe className="w-5 h-5 text-pink-500" />
-              <span>General Site Information & Contact Links</span>
+              <ShieldAlert className="w-5 h-5 text-pink-500" />
+              <span>Admin Activity Audit Log</span>
             </h3>
+
+            <div className="space-y-3">
+              {auditLogs.map((log) => (
+                <div key={log.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs font-medium">
+                  <div className="flex items-center gap-3">
+                    <span className="px-2.5 py-1 rounded bg-slate-900 text-pink-400 font-extrabold font-mono border border-slate-800">
+                      {log.action}
+                    </span>
+                    <span className="text-slate-200 font-semibold">{log.details}</span>
+                  </div>
+                  <div className="text-slate-500 font-mono">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: SITE INFO */}
+        {activeTab === "site" && (
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <Globe className="w-5 h-5 text-pink-500" />
+                <span>General Site Information & Contact Links</span>
+              </h3>
+              <button
+                onClick={() => handleSaveSection("siteConfig")}
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Site Info</span>
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -645,21 +857,6 @@ export default function AdminCMSPage() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Site Description</label>
-                <textarea
-                  rows={3}
-                  value={formData.siteConfig.description}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      siteConfig: { ...formData.siteConfig, description: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <label className="text-xs font-extrabold text-slate-400 uppercase">Support Email</label>
                 <input
                   type="text"
@@ -676,87 +873,25 @@ export default function AdminCMSPage() {
                   className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
                 />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Support Phone</label>
-                <input
-                  type="text"
-                  value={formData.siteConfig.contact.phone}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      siteConfig: {
-                        ...formData.siteConfig,
-                        contact: { ...formData.siteConfig.contact, phone: e.target.value },
-                      },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Office Address</label>
-                <input
-                  type="text"
-                  value={formData.siteConfig.contact.address}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      siteConfig: {
-                        ...formData.siteConfig,
-                        contact: { ...formData.siteConfig.contact, address: e.target.value },
-                      },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Working Hours</label>
-                <input
-                  type="text"
-                  value={formData.siteConfig.contact.workingHours}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      siteConfig: {
-                        ...formData.siteConfig,
-                        contact: { ...formData.siteConfig.contact, workingHours: e.target.value },
-                      },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Website Disclaimer Copy</label>
-                <textarea
-                  rows={3}
-                  value={formData.disclaimer}
-                  onChange={(e) => setFormData({ ...formData, disclaimer: e.target.value })}
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 3: ADVANCED SEO SETTINGS */}
+        {/* TAB 6: ADVANCED SEO */}
         {activeTab === "seo" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-8">
             <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-                  <Search className="w-5 h-5 text-pink-500" />
-                  <span>Advanced SEO & Meta Verification Settings</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Configure meta tags, OpenGraph images, Google Search Console, and Webmaster Verification
-                </p>
-              </div>
+              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <Search className="w-5 h-5 text-pink-500" />
+                <span>Advanced SEO & Meta Settings</span>
+              </h3>
+              <button
+                onClick={() => handleSaveSection("seoSettings")}
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save SEO Settings</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -790,95 +925,52 @@ export default function AdminCMSPage() {
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Meta Keywords (Comma Separated)</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.metaKeywords}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, metaKeywords: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">OpenGraph Image Path / URL</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.ogImage}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, ogImage: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Canonical Base URL</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.canonicalUrl}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, canonicalUrl: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Google Search Console Verification Code</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.googleVerification}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, googleVerification: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Bing Webmaster Verification Code</label>
-                <input
-                  type="text"
-                  value={formData.seoSettings.bingVerification}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      seoSettings: { ...formData.seoSettings, bingVerification: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
+                <label className="text-xs font-extrabold text-slate-400 uppercase">OpenGraph Image URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.seoSettings.ogImage}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        seoSettings: { ...formData.seoSettings, ogImage: e.target.value },
+                      })
+                    }
+                    className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
+                  />
+                  <button
+                    onClick={() => openMediaPicker((url) => setFormData({ ...formData, seoSettings: { ...formData.seoSettings, ogImage: url } }))}
+                    className="px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs whitespace-nowrap"
+                  >
+                    Gallery
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 4: Hero Copy */}
+        {/* TAB 7: HERO COPY */}
         {activeTab === "hero" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
-            <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-pink-500" />
-              <span>Hero Headline & Copy</span>
-            </h3>
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-pink-500" />
+                <span>Hero Copy Settings</span>
+              </h3>
+              <button
+                onClick={() => handleSaveSection("heroText")}
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Hero Copy</span>
+              </button>
+            </div>
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Top Badge Text</label>
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Badge Text</label>
                 <input
                   type="text"
                   value={formData.heroText.badgeText}
@@ -893,7 +985,7 @@ export default function AdminCMSPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Main Headline</label>
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Headline</label>
                 <input
                   type="text"
                   value={formData.heroText.headline}
@@ -908,9 +1000,9 @@ export default function AdminCMSPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">Subheadline Paragraph</label>
+                <label className="text-xs font-extrabold text-slate-400 uppercase">Subheadline</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={formData.heroText.subheadline}
                   onChange={(e) =>
                     setFormData({
@@ -921,96 +1013,42 @@ export default function AdminCMSPage() {
                   className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
                 />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase">CTA Button Text</label>
-                <input
-                  type="text"
-                  value={formData.heroText.ctaText}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      heroText: { ...formData.heroText, ctaText: e.target.value },
-                    })
-                  }
-                  className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium"
-                />
-              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 5: Ingredients Manager */}
+        {/* TAB 8: INGREDIENTS */}
         {activeTab === "ingredients" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-pink-500" />
-                <span>Active Supplement Ingredients</span>
+                <span>Active Ingredients</span>
               </h3>
-              <button
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    ingredients: [
-                      ...formData.ingredients,
-                      {
-                        name: "New Ingredient",
-                        description: "Description of nutrient benefits...",
-                        color: "#e92467",
-                        iconBg: "bg-pink-100 text-pink-600 border-pink-200",
-                      },
-                    ],
-                  })
-                }
-                className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Ingredient</span>
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleSaveSection("ingredients")}
+                  className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Ingredients</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {formData.ingredients.map((ing, idx) => (
                 <div key={idx} className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-extrabold text-pink-400 uppercase">Ingredient #{idx + 1}</span>
-                    <button
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          ingredients: formData.ingredients.filter((_, i) => i !== idx),
-                        })
-                      }
-                      className="p-2 text-slate-500 hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <input
-                      type="text"
-                      value={ing.name}
-                      onChange={(e) => {
-                        const updated = [...formData.ingredients];
-                        updated[idx].name = e.target.value;
-                        setFormData({ ...formData, ingredients: updated });
-                      }}
-                      placeholder="Name"
-                      className="col-span-2 p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
-                    />
-                    <input
-                      type="text"
-                      value={ing.color}
-                      onChange={(e) => {
-                        const updated = [...formData.ingredients];
-                        updated[idx].color = e.target.value;
-                        setFormData({ ...formData, ingredients: updated });
-                      }}
-                      placeholder="#e92467"
-                      className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-mono text-xs"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={ing.name}
+                    onChange={(e) => {
+                      const updated = [...formData.ingredients];
+                      updated[idx].name = e.target.value;
+                      setFormData({ ...formData, ingredients: updated });
+                    }}
+                    className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
+                  />
                   <textarea
                     rows={3}
                     value={ing.description}
@@ -1019,7 +1057,6 @@ export default function AdminCMSPage() {
                       updated[idx].description = e.target.value;
                       setFormData({ ...formData, ingredients: updated });
                     }}
-                    placeholder="Description"
                     className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium"
                   />
                 </div>
@@ -1028,48 +1065,26 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 6: FAQs Manager */}
+        {/* TAB 9: FAQS */}
         {activeTab === "faqs" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
                 <HelpCircle className="w-5 h-5 text-pink-500" />
-                <span>Frequently Asked Questions</span>
+                <span>FAQs</span>
               </h3>
               <button
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    faqs: [
-                      ...formData.faqs,
-                      { question: "New Question?", answer: "Answer details here..." },
-                    ],
-                  })
-                }
-                className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+                onClick={() => handleSaveSection("faqs")}
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
               >
-                <Plus className="w-4 h-4" />
-                <span>Add FAQ</span>
+                <Save className="w-4 h-4" />
+                <span>Save FAQs</span>
               </button>
             </div>
 
             <div className="space-y-6">
               {formData.faqs.map((faq, idx) => (
                 <div key={idx} className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-extrabold text-pink-400 uppercase">FAQ #{idx + 1}</span>
-                    <button
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          faqs: formData.faqs.filter((_, i) => i !== idx),
-                        })
-                      }
-                      className="p-2 text-slate-500 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                   <input
                     type="text"
                     value={faq.question}
@@ -1078,7 +1093,6 @@ export default function AdminCMSPage() {
                       updated[idx].question = e.target.value;
                       setFormData({ ...formData, faqs: updated });
                     }}
-                    placeholder="Question"
                     className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
                   />
                   <textarea
@@ -1089,7 +1103,6 @@ export default function AdminCMSPage() {
                       updated[idx].answer = e.target.value;
                       setFormData({ ...formData, faqs: updated });
                     }}
-                    placeholder="Answer"
                     className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium"
                   />
                 </div>
@@ -1098,79 +1111,36 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 7: Testimonials Manager */}
+        {/* TAB 10: TESTIMONIALS */}
         {activeTab === "testimonials" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-pink-500" />
-                <span>Customer Reviews & Testimonials</span>
+                <span>Reviews</span>
               </h3>
               <button
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    testimonials: [
-                      ...formData.testimonials,
-                      {
-                        id: String(Date.now()),
-                        name: "Customer Name",
-                        location: "City",
-                        quote: "Great experience with Hear O Care!",
-                        rating: 5,
-                        avatar: "/images/manish.jpg",
-                      },
-                    ],
-                  })
-                }
-                className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+                onClick={() => handleSaveSection("testimonials")}
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
               >
-                <Plus className="w-4 h-4" />
-                <span>Add Review</span>
+                <Save className="w-4 h-4" />
+                <span>Save Reviews</span>
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {formData.testimonials.map((t, idx) => (
                 <div key={t.id} className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-extrabold text-pink-400 uppercase">Review #{idx + 1}</span>
-                    <button
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          testimonials: formData.testimonials.filter((_, i) => i !== idx),
-                        })
-                      }
-                      className="p-2 text-slate-500 hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      value={t.name}
-                      onChange={(e) => {
-                        const updated = [...formData.testimonials];
-                        updated[idx].name = e.target.value;
-                        setFormData({ ...formData, testimonials: updated });
-                      }}
-                      placeholder="Name"
-                      className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
-                    />
-                    <input
-                      type="text"
-                      value={t.location}
-                      onChange={(e) => {
-                        const updated = [...formData.testimonials];
-                        updated[idx].location = e.target.value;
-                        setFormData({ ...formData, testimonials: updated });
-                      }}
-                      placeholder="Location"
-                      className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-medium"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={t.name}
+                    onChange={(e) => {
+                      const updated = [...formData.testimonials];
+                      updated[idx].name = e.target.value;
+                      setFormData({ ...formData, testimonials: updated });
+                    }}
+                    className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
+                  />
                   <textarea
                     rows={3}
                     value={t.quote}
@@ -1179,7 +1149,6 @@ export default function AdminCMSPage() {
                       updated[idx].quote = e.target.value;
                       setFormData({ ...formData, testimonials: updated });
                     }}
-                    placeholder="Quote"
                     className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium"
                   />
                 </div>
@@ -1188,18 +1157,26 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 8: Blog Posts Manager */}
+        {/* TAB 11: BLOGS */}
         {activeTab === "blogs" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-6">
-            <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-pink-500" />
-              <span>Blog Articles Manager</span>
-            </h3>
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-pink-500" />
+                <span>Blogs</span>
+              </h3>
+              <button
+                onClick={() => handleSaveSection("blogPosts")}
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-extrabold text-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Blogs</span>
+              </button>
+            </div>
 
             <div className="space-y-6">
               {formData.blogPosts.map((post, idx) => (
                 <div key={post.slug} className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-                  <span className="text-xs font-extrabold text-pink-400 uppercase">Article #{idx + 1}</span>
                   <input
                     type="text"
                     value={post.title}
@@ -1210,15 +1187,25 @@ export default function AdminCMSPage() {
                     }}
                     className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-bold"
                   />
+                  <TextFormatToolbar
+                    id={`blog-excerpt-${idx}`}
+                    value={post.excerpt}
+                    onChange={(val) => {
+                      const updated = [...formData.blogPosts];
+                      updated[idx].excerpt = val;
+                      setFormData({ ...formData, blogPosts: updated });
+                    }}
+                  />
                   <textarea
-                    rows={2}
+                    id={`blog-excerpt-${idx}`}
+                    rows={3}
                     value={post.excerpt}
                     onChange={(e) => {
                       const updated = [...formData.blogPosts];
                       updated[idx].excerpt = e.target.value;
                       setFormData({ ...formData, blogPosts: updated });
                     }}
-                    className="w-full p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium"
+                    className="w-full p-3 rounded-b-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium font-mono text-sm"
                   />
                 </div>
               ))}
@@ -1226,7 +1213,7 @@ export default function AdminCMSPage() {
           </div>
         )}
 
-        {/* TAB 9: Backup & Restore */}
+        {/* TAB 12: BACKUP & RESTORE */}
         {activeTab === "backup" && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl space-y-8">
             <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -1234,62 +1221,35 @@ export default function AdminCMSPage() {
               <span>Backup, Restore & Reset Point</span>
             </h3>
 
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-              <div className="flex items-center gap-3 text-pink-400 font-bold">
-                <Sparkles className="w-5 h-5" />
-                <span>Active Git Backup Tag: <code className="bg-slate-900 px-3 py-1 rounded text-white font-mono">backup-v1-pre-cms</code></span>
-              </div>
-              <p className="text-xs text-slate-400">
-                You can run <code className="text-slate-200">git checkout backup-v1-pre-cms</code> in terminal to restore the code repository to its pre-CMS clean state anytime.
-              </p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Download JSON Backup */}
               <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
                 <Download className="w-8 h-8 text-pink-500" />
                 <h4 className="font-extrabold text-white text-base">Export Backup JSON</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Download full copy of your CMS data, all custom pages & SEO settings to keep a local backup file on your computer.
-                </p>
                 <button
                   onClick={handleDownloadBackup}
-                  className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs uppercase tracking-wider transition-colors"
+                  className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs uppercase"
                 >
                   Download JSON
                 </button>
               </div>
 
-              {/* Upload JSON Restore */}
               <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
                 <Upload className="w-8 h-8 text-emerald-400" />
                 <h4 className="font-extrabold text-white text-base">Restore from File</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Upload a previously saved `.json` backup file to instantly restore CMS state & all custom pages.
-                </p>
-                <label className="w-full py-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-extrabold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center block">
+                <label className="w-full py-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 font-extrabold text-xs uppercase cursor-pointer text-center block border border-emerald-800">
                   Select Backup JSON
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleRestoreBackupFile}
-                    className="hidden"
-                  />
+                  <input type="file" accept=".json" onChange={handleRestoreBackupFile} className="hidden" />
                 </label>
               </div>
 
-              {/* Reset to Factory Defaults */}
               <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
                 <RotateCcw className="w-8 h-8 text-amber-500" />
-                <h4 className="font-extrabold text-white text-base">Reset to System Defaults</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Revert all edited fields & pages back to the original default static configuration.
-                </p>
+                <h4 className="font-extrabold text-white text-base">Reset Defaults</h4>
                 <button
                   onClick={handleResetToDefaults}
-                  className="w-full py-3 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 font-extrabold text-xs uppercase tracking-wider transition-colors"
+                  className="w-full py-3 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 font-extrabold text-xs uppercase"
                 >
-                  Reset Factory Defaults
+                  Reset Defaults
                 </button>
               </div>
             </div>

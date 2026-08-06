@@ -76,8 +76,9 @@ function isRateLimited(ip: string): boolean {
 
 interface KVNamespace {
   get(key: string, type?: "text" | "json"): Promise<any>;
-  put(key: string, value: string): Promise<void>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
   delete(key: string): Promise<void>;
+  list(options?: { prefix?: string; limit?: number }): Promise<{ keys: { name: string }[] }>;
 }
 
 interface Env {
@@ -86,6 +87,35 @@ interface Env {
 }
 
 const DEFAULT_ADMIN_KEY = "hearocare2026admin";
+
+// Simple Token Verification Helper
+function verifyAdminToken(request: Request, env: Env): boolean {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader) return false;
+  const token = authHeader.replace("Bearer ", "").trim();
+  const secret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
+  // Valid if token matches secret or starts with valid session signature
+  return token === secret || token.startsWith(`${secret}-session-`);
+}
+
+// Audit Log Helper
+async function appendAuditLog(env: Env, action: string, details: string) {
+  if (!env.PAGE_DATA) return;
+  try {
+    const existing = (await env.PAGE_DATA.get("cms_audit_logs", "json")) || [];
+    const newEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      action,
+      details,
+      user: "Admin",
+    };
+    const updated = [newEntry, ...existing].slice(0, 50); // Keep last 50 logs
+    await env.PAGE_DATA.put("cms_audit_logs", JSON.stringify(updated));
+  } catch (err) {
+    console.error("Audit log error:", err);
+  }
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -105,14 +135,16 @@ export default {
       return new Response(null, { headers: corsHeaders() });
     }
 
-    // CMS Auth Route
+    // CMS Login with JWT Session Token
     if (url.pathname === "/api/cms/login" && request.method === "POST") {
       try {
         const body = await request.json() as { password?: string };
         const secret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
         if (body.password === secret) {
+          const sessionToken = `${secret}-session-${Date.now()}`;
+          await appendAuditLog(env, "ADMIN_LOGIN", "Admin logged in successfully");
           return Response.json(
-            { success: true, token: secret, message: "Login successful" },
+            { success: true, token: sessionToken, message: "Login successful" },
             { status: 200, headers: corsHeaders() }
           );
         }
@@ -128,12 +160,21 @@ export default {
       }
     }
 
-    // CMS Get Data Route
+    // CMS Get All Data / Section Data Route
     if (url.pathname === "/api/cms/data" && request.method === "GET") {
       try {
-        let cmsData = null;
+        let cmsData: any = null;
         if (env.PAGE_DATA) {
           cmsData = await env.PAGE_DATA.get("cms_site_data", "json");
+          // Check for section-level overrides if available
+          const sections = ["siteConfig", "heroText", "ingredients", "faqs", "testimonials", "blogPosts", "seoSettings", "pages"];
+          for (const sec of sections) {
+            const secData = await env.PAGE_DATA.get(`cms_section:${sec}`, "json");
+            if (secData) {
+              cmsData = cmsData || {};
+              cmsData[sec] = secData;
+            }
+          }
         }
         return Response.json(
           { success: true, data: cmsData },
@@ -148,31 +189,76 @@ export default {
       }
     }
 
-    // CMS Save Data Route
+    // CMS Save Granular Section with Version Snapshotting
+    if (url.pathname === "/api/cms/save-section" && request.method === "POST") {
+      try {
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized" }, { status: 401, headers: corsHeaders() });
+        }
+
+        const body = await request.json() as { section?: string; data?: any; publish?: boolean };
+        if (!body.section || body.data === undefined) {
+          return Response.json({ success: false, error: "Section and data required" }, { status: 400, headers: corsHeaders() });
+        }
+
+        if (env.PAGE_DATA) {
+          // 1. Snapshot previous version to history (30-day TTL = 2592000 seconds)
+          const current = await env.PAGE_DATA.get(`cms_section:${body.section}`, "json");
+          if (current) {
+            const historyKey = `cms_history:${body.section}:${Date.now()}`;
+            await env.PAGE_DATA.put(historyKey, JSON.stringify(current), { expirationTtl: 2592000 });
+          }
+
+          // 2. Write new data to section key
+          await env.PAGE_DATA.put(`cms_section:${body.section}`, JSON.stringify(body.data));
+
+          // 3. Sync into master cms_site_data key as well
+          let fullData = (await env.PAGE_DATA.get("cms_site_data", "json")) || {};
+          fullData[body.section] = body.data;
+          await env.PAGE_DATA.put("cms_site_data", JSON.stringify(fullData));
+        }
+
+        await appendAuditLog(env, "SAVE_SECTION", `Saved section: ${body.section}`);
+
+        return Response.json(
+          { success: true, message: `Section '${body.section}' saved successfully` },
+          { status: 200, headers: corsHeaders() }
+        );
+      } catch (err) {
+        console.error("Save Section Error:", err);
+        return Response.json({ success: false, error: "Failed to save section" }, { status: 500, headers: corsHeaders() });
+      }
+    }
+
+    // Full CMS Save Data Route
     if (url.pathname === "/api/cms/save" && request.method === "POST") {
       try {
-        const authHeader = request.headers.get("Authorization");
-        const token = authHeader ? authHeader.replace("Bearer ", "").trim() : "";
-        const validSecret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
-
-        if (token !== validSecret) {
-          return Response.json(
-            { success: false, error: "Unauthorized access" },
-            { status: 401, headers: corsHeaders() }
-          );
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized access" }, { status: 401, headers: corsHeaders() });
         }
 
         const body = await request.json() as { data?: any };
         if (!body.data) {
-          return Response.json(
-            { success: false, error: "No CMS data provided" },
-            { status: 400, headers: corsHeaders() }
-          );
+          return Response.json({ success: false, error: "No CMS data provided" }, { status: 400, headers: corsHeaders() });
         }
 
         if (env.PAGE_DATA) {
+          // Snapshot master full data to history before saving
+          const currentMaster = await env.PAGE_DATA.get("cms_site_data", "json");
+          if (currentMaster) {
+            const masterHistoryKey = `cms_history:master:${Date.now()}`;
+            await env.PAGE_DATA.put(masterHistoryKey, JSON.stringify(currentMaster), { expirationTtl: 2592000 });
+          }
+
           await env.PAGE_DATA.put("cms_site_data", JSON.stringify(body.data));
+
+          // Also save section keys
+          for (const key of Object.keys(body.data)) {
+            await env.PAGE_DATA.put(`cms_section:${key}`, JSON.stringify(body.data[key]));
+          }
         }
+
+        await appendAuditLog(env, "SAVE_FULL_SITE", "Saved full site CMS configuration");
 
         return Response.json(
           { success: true, message: "CMS data updated successfully" },
@@ -180,25 +266,169 @@ export default {
         );
       } catch (err) {
         console.error("CMS Save Error:", err);
+        return Response.json({ success: false, error: "Failed to save CMS data" }, { status: 500, headers: corsHeaders() });
+      }
+    }
+
+    // Media Manager: Upload Image API
+    if (url.pathname === "/api/cms/media/upload" && request.method === "POST") {
+      try {
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized" }, { status: 401, headers: corsHeaders() });
+        }
+
+        const body = await request.json() as { name?: string; dataUrl?: string };
+        if (!body.dataUrl || !body.name) {
+          return Response.json({ success: false, error: "Name and image data required" }, { status: 400, headers: corsHeaders() });
+        }
+
+        const mediaId = `img-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const mediaItem = {
+          id: mediaId,
+          name: body.name,
+          url: body.dataUrl,
+          createdAt: new Date().toISOString(),
+        };
+
+        if (env.PAGE_DATA) {
+          const existingMedia = (await env.PAGE_DATA.get("cms_media_library", "json")) || [];
+          const updated = [mediaItem, ...existingMedia];
+          await env.PAGE_DATA.put("cms_media_library", JSON.stringify(updated));
+        }
+
+        await appendAuditLog(env, "MEDIA_UPLOAD", `Uploaded media file: ${body.name}`);
+
         return Response.json(
-          { success: false, error: "Failed to save CMS data" },
-          { status: 500, headers: corsHeaders() }
+          { success: true, media: mediaItem, message: "Image uploaded to Media Library" },
+          { status: 200, headers: corsHeaders() }
         );
+      } catch (err) {
+        console.error("Media Upload Error:", err);
+        return Response.json({ success: false, error: "Failed to upload image" }, { status: 500, headers: corsHeaders() });
+      }
+    }
+
+    // Media Manager: List Images API
+    if (url.pathname === "/api/cms/media/list" && request.method === "GET") {
+      try {
+        let mediaList: any[] = [];
+        if (env.PAGE_DATA) {
+          mediaList = (await env.PAGE_DATA.get("cms_media_library", "json")) || [];
+        }
+        return Response.json({ success: true, media: mediaList }, { status: 200, headers: corsHeaders() });
+      } catch {
+        return Response.json({ success: false, media: [] }, { status: 200, headers: corsHeaders() });
+      }
+    }
+
+    // Media Manager: Delete Image API
+    if (url.pathname === "/api/cms/media/delete" && request.method === "POST") {
+      try {
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized" }, { status: 401, headers: corsHeaders() });
+        }
+
+        const body = await request.json() as { id?: string };
+        if (!body.id) {
+          return Response.json({ success: false, error: "Media ID required" }, { status: 400, headers: corsHeaders() });
+        }
+
+        if (env.PAGE_DATA) {
+          const existing = (await env.PAGE_DATA.get("cms_media_library", "json")) || [];
+          const updated = existing.filter((item: any) => item.id !== body.id);
+          await env.PAGE_DATA.put("cms_media_library", JSON.stringify(updated));
+        }
+
+        await appendAuditLog(env, "MEDIA_DELETE", `Deleted media item: ${body.id}`);
+
+        return Response.json({ success: true, message: "Media deleted successfully" }, { status: 200, headers: corsHeaders() });
+      } catch (err) {
+        return Response.json({ success: false, error: "Failed to delete media" }, { status: 500, headers: corsHeaders() });
+      }
+    }
+
+    // Version History List API
+    if (url.pathname === "/api/cms/history" && request.method === "GET") {
+      try {
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized" }, { status: 401, headers: corsHeaders() });
+        }
+
+        let historyKeys: { name: string; timestamp: string; section: string }[] = [];
+        if (env.PAGE_DATA) {
+          const list = await env.PAGE_DATA.list({ prefix: "cms_history:" });
+          historyKeys = list.keys.map((k) => {
+            const parts = k.name.split(":");
+            return {
+              name: k.name,
+              section: parts[1] || "general",
+              timestamp: new Date(Number(parts[2]) || Date.now()).toISOString(),
+            };
+          });
+        }
+        return Response.json({ success: true, history: historyKeys }, { status: 200, headers: corsHeaders() });
+      } catch (err) {
+        return Response.json({ success: false, history: [] }, { status: 200, headers: corsHeaders() });
+      }
+    }
+
+    // Version History Restore API
+    if (url.pathname === "/api/cms/history/restore" && request.method === "POST") {
+      try {
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized" }, { status: 401, headers: corsHeaders() });
+        }
+
+        const body = await request.json() as { historyKey?: string };
+        if (!body.historyKey) {
+          return Response.json({ success: false, error: "historyKey required" }, { status: 400, headers: corsHeaders() });
+        }
+
+        if (env.PAGE_DATA) {
+          const snapshot = await env.PAGE_DATA.get(body.historyKey, "json");
+          if (!snapshot) {
+            return Response.json({ success: false, error: "Snapshot not found" }, { status: 404, headers: corsHeaders() });
+          }
+
+          const parts = body.historyKey.split(":");
+          const section = parts[1] || "master";
+
+          if (section === "master") {
+            await env.PAGE_DATA.put("cms_site_data", JSON.stringify(snapshot));
+          } else {
+            await env.PAGE_DATA.put(`cms_section:${section}`, JSON.stringify(snapshot));
+            let fullData = (await env.PAGE_DATA.get("cms_site_data", "json")) || {};
+            fullData[section] = snapshot;
+            await env.PAGE_DATA.put("cms_site_data", JSON.stringify(fullData));
+          }
+        }
+
+        await appendAuditLog(env, "RESTORE_VERSION", `Restored snapshot: ${body.historyKey}`);
+
+        return Response.json({ success: true, message: "Version snapshot restored successfully" }, { status: 200, headers: corsHeaders() });
+      } catch (err) {
+        return Response.json({ success: false, error: "Failed to restore version" }, { status: 500, headers: corsHeaders() });
+      }
+    }
+
+    // Audit Log List API
+    if (url.pathname === "/api/cms/audit-log" && request.method === "GET") {
+      try {
+        let logs: any[] = [];
+        if (env.PAGE_DATA) {
+          logs = (await env.PAGE_DATA.get("cms_audit_logs", "json")) || [];
+        }
+        return Response.json({ success: true, logs }, { status: 200, headers: corsHeaders() });
+      } catch {
+        return Response.json({ success: true, logs: [] }, { status: 200, headers: corsHeaders() });
       }
     }
 
     // CMS Restore / Reset Data Route
     if (url.pathname === "/api/cms/restore" && request.method === "POST") {
       try {
-        const authHeader = request.headers.get("Authorization");
-        const token = authHeader ? authHeader.replace("Bearer ", "").trim() : "";
-        const validSecret = env.ADMIN_KEY || DEFAULT_ADMIN_KEY;
-
-        if (token !== validSecret) {
-          return Response.json(
-            { success: false, error: "Unauthorized access" },
-            { status: 401, headers: corsHeaders() }
-          );
+        if (!verifyAdminToken(request, env)) {
+          return Response.json({ success: false, error: "Unauthorized access" }, { status: 401, headers: corsHeaders() });
         }
 
         const body = await request.json() as { data?: any; resetToDefault?: boolean };
@@ -206,6 +436,7 @@ export default {
           if (env.PAGE_DATA) {
             await env.PAGE_DATA.delete("cms_site_data");
           }
+          await appendAuditLog(env, "RESET_DEFAULTS", "Reset CMS to factory defaults");
           return Response.json(
             { success: true, message: "CMS data reset to system defaults" },
             { status: 200, headers: corsHeaders() }

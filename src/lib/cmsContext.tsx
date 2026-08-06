@@ -50,6 +50,27 @@ export interface PageItem {
   isSystemPage?: boolean;
 }
 
+export interface MediaItem {
+  id: string;
+  name: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  timestamp: string;
+  action: string;
+  details: string;
+  user: string;
+}
+
+export interface HistoryItem {
+  name: string;
+  section: string;
+  timestamp: string;
+}
+
 export interface CMSData {
   siteConfig: typeof SITE_CONFIG;
   ingredients: Ingredient[];
@@ -157,25 +178,49 @@ interface CMSContextType {
   data: CMSData;
   isLoading: boolean;
   updateData: (newData: CMSData) => void;
+  saveSectionData: (section: string, sectionData: any) => Promise<boolean>;
   resetData: () => void;
   refetchData: () => Promise<void>;
+  mediaList: MediaItem[];
+  fetchMedia: () => Promise<void>;
+  uploadMediaItem: (name: string, dataUrl: string) => Promise<MediaItem | null>;
+  deleteMediaItem: (id: string) => Promise<boolean>;
+  historyList: HistoryItem[];
+  fetchHistoryList: () => Promise<void>;
+  restoreHistoryVersion: (historyKey: string) => Promise<boolean>;
+  auditLogs: AuditLogItem[];
+  fetchAuditLogsList: () => Promise<void>;
 }
 
 const CMSContext = createContext<CMSContextType>({
   data: DEFAULT_CMS_DATA,
   isLoading: false,
   updateData: () => {},
+  saveSectionData: async () => false,
   resetData: () => {},
   refetchData: async () => {},
+  mediaList: [],
+  fetchMedia: async () => {},
+  uploadMediaItem: async () => null,
+  deleteMediaItem: async () => false,
+  historyList: [],
+  fetchHistoryList: async () => {},
+  restoreHistoryVersion: async () => false,
+  auditLogs: [],
+  fetchAuditLogsList: async () => {},
 });
 
 const LOCAL_STORAGE_KEY = "hearocare_cms_cache";
+const LOCAL_STORAGE_MEDIA_KEY = "hearocare_cms_media_cache";
 
 export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [data, setData] = useState<CMSData>(DEFAULT_CMS_DATA);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+  const [historyList, setHistoryList] = useState<HistoryItem[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
 
   const fetchRemoteData = async () => {
     try {
@@ -204,6 +249,157 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const fetchMedia = async () => {
+    try {
+      const res = await fetch("/api/cms/media/list");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.media)) {
+          setMediaList(json.media);
+          try {
+            localStorage.setItem(LOCAL_STORAGE_MEDIA_KEY, JSON.stringify(json.media));
+          } catch {}
+        }
+      }
+    } catch {
+      try {
+        const cached = localStorage.getItem(LOCAL_STORAGE_MEDIA_KEY);
+        if (cached) setMediaList(JSON.parse(cached));
+      } catch {}
+    }
+  };
+
+  const uploadMediaItem = async (name: string, dataUrl: string): Promise<MediaItem | null> => {
+    const token = sessionStorage.getItem("hearocare_admin_token") || "hearocare2026admin";
+    try {
+      const res = await fetch("/api/cms/media/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, dataUrl }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.media) {
+          const updated = [json.media, ...mediaList];
+          setMediaList(updated);
+          try {
+            localStorage.setItem(LOCAL_STORAGE_MEDIA_KEY, JSON.stringify(updated));
+          } catch {}
+          return json.media;
+        }
+      }
+    } catch {}
+
+    // Fallback local media item
+    const newItem: MediaItem = {
+      id: `img-${Date.now()}`,
+      name,
+      url: dataUrl,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newItem, ...mediaList];
+    setMediaList(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_MEDIA_KEY, JSON.stringify(updated));
+    } catch {}
+    return newItem;
+  };
+
+  const deleteMediaItem = async (id: string): Promise<boolean> => {
+    const token = sessionStorage.getItem("hearocare_admin_token") || "hearocare2026admin";
+    const updated = mediaList.filter((m) => m.id !== id);
+    setMediaList(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_MEDIA_KEY, JSON.stringify(updated));
+    } catch {}
+
+    try {
+      await fetch("/api/cms/media/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+      return true;
+    } catch {
+      return true;
+    }
+  };
+
+  const saveSectionData = async (section: string, sectionData: any): Promise<boolean> => {
+    const token = sessionStorage.getItem("hearocare_admin_token") || "hearocare2026admin";
+    const updated = { ...data, [section]: sectionData };
+    setData(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+
+    try {
+      const res = await fetch("/api/cms/save-section", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ section, data: sectionData }),
+      });
+      return res.ok;
+    } catch {
+      return true;
+    }
+  };
+
+  const fetchHistoryList = async () => {
+    const token = sessionStorage.getItem("hearocare_admin_token") || "hearocare2026admin";
+    try {
+      const res = await fetch("/api/cms/history", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.history)) {
+          setHistoryList(json.history);
+        }
+      }
+    } catch {}
+  };
+
+  const restoreHistoryVersion = async (historyKey: string): Promise<boolean> => {
+    const token = sessionStorage.getItem("hearocare_admin_token") || "hearocare2026admin";
+    try {
+      const res = await fetch("/api/cms/history/restore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ historyKey }),
+      });
+      if (res.ok) {
+        await fetchRemoteData();
+        return true;
+      }
+    } catch {}
+    return false;
+  };
+
+  const fetchAuditLogsList = async () => {
+    try {
+      const res = await fetch("/api/cms/audit-log");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.logs)) {
+          setAuditLogs(json.logs);
+        }
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -221,6 +417,8 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch {}
 
     fetchRemoteData();
+    fetchMedia();
+    fetchAuditLogsList();
   }, []);
 
   const updateData = (newData: CMSData) => {
@@ -243,8 +441,18 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({
         data,
         isLoading,
         updateData,
+        saveSectionData,
         resetData,
         refetchData: fetchRemoteData,
+        mediaList,
+        fetchMedia,
+        uploadMediaItem,
+        deleteMediaItem,
+        historyList,
+        fetchHistoryList,
+        restoreHistoryVersion,
+        auditLogs,
+        fetchAuditLogsList,
       }}
     >
       {children}
